@@ -1,0 +1,54 @@
+{
+  "last_updated": null,
+  "assets": {
+    "map_base": {
+      "path": "public/assets/map/map-base.png",
+      "status": "placeholder",
+      "source": null,
+      "dimensions": "1600x1000",
+      "notes": ""
+    },
+    "fog_overlay": {
+      "path": "public/assets/map/fog-overlay.png",
+      "status": "placeholder",
+      "source": null,
+      "dimensions": "1600x1000",
+      "notes": ""
+    },
+    "ronin_idle": {
+      "path": "public/assets/sprites/ronin_idle.png",
+      "status": "placeholder",
+      "source": null,
+      "dimensions": "96x128",
+      "notes": "Form 1. Test aesthetic against Ghost of Tsushima quality bar before batch generating other forms."
+    },
+    "warrior_battle": {
+      "path": "public/assets/sprites/warrior_battle_idle.png",
+      "status": "placeholder",
+      "source": null,
+      "dimensions": "192x256",
+      "notes": "Form 2. Generate after ronin_idle aesthetic is validated."
+    },
+    "streak_bar": {
+      "path": "public/assets/ui/segmented_bar_texture.png",
+      "status": "css_alternative",
+      "source": "css",
+      "dimensions": "300x24",
+      "notes": "Build in CSS for V1. Only generate as image if CSS can't achieve the look."
+    },
+    "evolution_strip": {
+      "path": "public/assets/sprites/evolution_forms_strip.png",
+      "status": "placeholder",
+      "source": null,
+      "dimensions": "512x128",
+      "notes": "All 4 forms side-by-side. Generate last, after all individual forms are ready."
+    },
+    "avatar_sm": {
+      "path": "public/assets/sprites/avatar_ronin_sm.png",
+      "status": "placeholder",
+      "source": null,
+      "dimensions": "32x48",
+      "notes": "Form 1 small. Used in persistent nav corner."
+    }
+  }
+}
