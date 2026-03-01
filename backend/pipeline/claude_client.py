@@ -13,6 +13,7 @@ async def generate_with_claude(
     prompt: str,
     model: str,
     expected_fields: list[str],
+    max_tokens: int = 4096,
     system: str = (
         "You are a precise JSON generator. "
         "Always respond with valid JSON only. "
@@ -21,7 +22,7 @@ async def generate_with_claude(
 ) -> dict[str, Any]:
     response = client.messages.create(
         model=model,
-        max_tokens=2048,
+        max_tokens=max_tokens,
         system=system,
         messages=[{"role": "user", "content": prompt}],
     )

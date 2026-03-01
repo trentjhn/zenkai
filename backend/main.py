@@ -27,6 +27,16 @@ app.add_middleware(
 )
 
 
+from backend.routers import modules, concepts, progress, character, sessions, pipeline
+
+app.include_router(modules.router)
+app.include_router(concepts.router)
+app.include_router(progress.router)
+app.include_router(character.router)
+app.include_router(sessions.router)
+app.include_router(pipeline.router)
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok"}
