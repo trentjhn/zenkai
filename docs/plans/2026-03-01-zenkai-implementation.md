@@ -16,15 +16,360 @@
 
 | Phase | What You're Building | Checkpoint Gate |
 |---|---|---|
+| 0 | Test infrastructure | `pytest`, `vitest`, and `playwright` all run green on empty suites |
 | 1 | Project scaffold + DB schema | Both services run, DB created with all 10 tables |
 | 2 | Design system | App renders with correct aesthetic — clipped corners, correct colors, no Inter |
 | 3 | Content pipeline | Run pipeline on Module 1, verify all content in SQLite |
-| 4 | Backend API | All routes return correct data, test with httpie |
-| 5 | Core learning UI | Full concept reading flow works end-to-end |
+| 4 | Backend API | All routes return correct data, `pytest` integration suite passes |
+| 5 | Core learning UI | Full concept reading flow works end-to-end, `vitest` component suite passes |
 | 6 | Quiz battle | Quiz flow works, answers and confidence submit to backend |
 | 7 | World map + character | All screens navigate correctly, progression gates work |
 | 8 | Spaced repetition | Review queue surfaces correctly-scheduled items |
 | 9 | Polish + assets | PixelLab test sprite evaluated, Framer Motion transitions wired |
+| E2E | End-to-end smoke tests | Playwright passes all 3 critical user flow tests |
+
+---
+
+## Phase 0 — Test Infrastructure
+
+> Run this phase before writing any application code. If tests can't run, nothing downstream is trustworthy.
+
+### Task 0.1: Backend test setup — pytest + FastAPI TestClient
+
+**Files:**
+- Create: `backend/pytest.ini`
+- Create: `backend/tests/__init__.py`
+- Create: `backend/tests/conftest.py`
+
+**Step 1: Add test dependencies to requirements.txt**
+```
+pytest==8.3.0
+pytest-asyncio==0.24.0
+pytest-cov==5.0.0
+httpx==0.27.0
+```
+
+**Step 2: Create pytest.ini**
+```ini
+[pytest]
+asyncio_mode = auto
+testpaths = tests
+python_files = test_*.py
+python_classes = Test*
+python_functions = test_*
+addopts = -v --tb=short
+```
+
+**Step 3: Create tests/conftest.py**
+```python
+import pytest
+import asyncio
+from pathlib import Path
+from httpx import AsyncClient, ASGITransport
+from backend.main import app
+from backend.database import init_db
+
+@pytest.fixture(scope="session")
+def event_loop():
+    loop = asyncio.new_event_loop()
+    yield loop
+    loop.close()
+
+@pytest.fixture
+async def test_db(tmp_path, monkeypatch):
+    """Isolated SQLite DB per test — never touches zenkai.db."""
+    db_file = str(tmp_path / "test_zenkai.db")
+    monkeypatch.setenv("DB_PATH", db_file)
+    await init_db()
+    return db_file
+
+@pytest.fixture
+async def client(test_db):
+    """FastAPI AsyncClient wired to a fresh test DB."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test"
+    ) as ac:
+        yield ac
+```
+
+**Step 4: Create a smoke test to verify the setup**
+```python
+# backend/tests/test_smoke.py
+async def test_health(client):
+    response = await client.get("/health")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+```
+
+**Step 5: Run it**
+```bash
+cd backend && pip install -r requirements.txt
+pytest tests/test_smoke.py -v
+```
+Expected: `test_health PASSED`
+
+**Step 6: Verify coverage report works**
+```bash
+pytest tests/ --cov=. --cov-report=term-missing
+```
+Expected: Coverage table printed, no errors.
+
+**Step 7: Commit**
+```bash
+git add backend/pytest.ini backend/tests/
+git commit -m "test: pytest infrastructure with AsyncClient fixture and isolated test DB"
+```
+
+---
+
+### Task 0.2: Frontend test setup — Vitest + React Testing Library
+
+**Files:**
+- Create: `frontend/vitest.config.ts`
+- Create: `frontend/tests/setup.ts`
+- Modify: `frontend/package.json`
+
+**Step 1: Install test dependencies**
+```bash
+cd frontend
+npm install -D vitest @vitejs/plugin-react jsdom @testing-library/react @testing-library/jest-dom @testing-library/user-event
+```
+
+**Step 2: Create vitest.config.ts**
+```typescript
+import { defineConfig } from "vitest/config"
+import react from "@vitejs/plugin-react"
+import path from "path"
+
+export default defineConfig({
+  plugins: [react()],
+  test: {
+    environment: "jsdom",
+    setupFiles: ["./tests/setup.ts"],
+    globals: true,
+    coverage: {
+      reporter: ["text", "lcov"],
+      include: ["components/**", "lib/**"],
+    },
+  },
+  resolve: {
+    alias: { "@": path.resolve(__dirname, ".") },
+  },
+})
+```
+
+**Step 3: Create tests/setup.ts**
+```typescript
+import "@testing-library/jest-dom"
+```
+
+**Step 4: Add test scripts to package.json**
+```json
+"scripts": {
+  "test": "vitest run",
+  "test:watch": "vitest",
+  "test:coverage": "vitest run --coverage"
+}
+```
+
+**Step 5: Create a smoke test**
+```typescript
+// frontend/tests/smoke.test.tsx
+import { describe, it, expect } from "vitest"
+
+describe("test infrastructure", () => {
+  it("runs", () => {
+    expect(true).toBe(true)
+  })
+})
+```
+
+**Step 6: Run it**
+```bash
+cd frontend && npm test
+```
+Expected: `1 test passed`
+
+**Step 7: Commit**
+```bash
+git add frontend/vitest.config.ts frontend/tests/ frontend/package.json
+git commit -m "test: Vitest + React Testing Library infrastructure"
+```
+
+---
+
+### Task 0.3: End-to-end test setup — Playwright
+
+**Files:**
+- Create: `playwright.config.ts` (repo root)
+- Create: `e2e/smoke.spec.ts`
+
+**Step 1: Install Playwright at repo root**
+```bash
+cd /Users/t-rawww/zenkai
+npm init -y
+npm install -D @playwright/test
+npx playwright install chromium
+```
+
+**Step 2: Create playwright.config.ts**
+```typescript
+import { defineConfig, devices } from "@playwright/test"
+
+export default defineConfig({
+  testDir: "./e2e",
+  timeout: 30_000,
+  retries: 0,
+  use: {
+    baseURL: "http://localhost:3000",
+    headless: true,
+    screenshot: "only-on-failure",
+    video: "retain-on-failure",
+  },
+  projects: [
+    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+  ],
+  webServer: [
+    {
+      command: "cd frontend && npm run dev",
+      url: "http://localhost:3000",
+      reuseExistingServer: true,
+      timeout: 30_000,
+    },
+    {
+      command: "cd backend && uvicorn main:app --port 8000",
+      url: "http://localhost:8000/health",
+      reuseExistingServer: true,
+      timeout: 30_000,
+    },
+  ],
+})
+```
+
+**Step 3: Create e2e/smoke.spec.ts**
+```typescript
+import { test, expect } from "@playwright/test"
+
+test("app loads", async ({ page }) => {
+  await page.goto("/")
+  await expect(page).not.toHaveTitle("Error")
+})
+```
+
+**Step 4: Add E2E scripts to root package.json**
+```json
+"scripts": {
+  "test:e2e": "playwright test",
+  "test:e2e:ui": "playwright test --ui"
+}
+```
+
+**Step 5: Run it (requires both services running)**
+```bash
+npx playwright test e2e/smoke.spec.ts
+```
+Expected: `1 passed`
+
+**Step 6: Commit**
+```bash
+git add playwright.config.ts e2e/ package.json
+git commit -m "test: Playwright E2E infrastructure with smoke test"
+```
+
+---
+
+### Task 0.4: Full E2E test suite — the 3 critical user flows
+
+These tests define what "working" means for the entire app. Write them now as failing specs — they will pass as phases complete.
+
+**File:** `e2e/critical-flows.spec.ts`
+
+```typescript
+import { test, expect } from "@playwright/test"
+
+// FLOW 1: Concept Learning
+test("learn flow — read a concept end-to-end", async ({ page }) => {
+  await page.goto("/world-map")
+  await page.click('[data-testid="module-0"]')           // Enter Module 0 (always unlocked)
+  await expect(page.locator('[data-testid="prediction-question"]')).toBeVisible()
+  await page.click('[data-testid="prediction-option-0"]') // Answer prediction question
+  await expect(page.locator('[data-testid="concept-card"]')).toBeVisible()
+  await expect(page.locator('[data-testid="concept-hook"]')).not.toBeEmpty()
+  await page.click('[data-testid="go-deeper-btn"]')
+  await expect(page.locator('[data-testid="deep-layer"]')).toBeVisible()
+  await page.click('[data-testid="confidence-knew-it"]')
+  await expect(page).toHaveURL(/\/learn/)
+})
+
+// FLOW 2: Quiz Battle
+test("quiz flow — answer a question with confidence rating", async ({ page }) => {
+  await page.goto("/quiz/1")
+  await expect(page.locator('[data-testid="quiz-question"]')).toBeVisible()
+  await page.click('[data-testid="quiz-option-0"]')
+  await expect(page.locator('[data-testid="answer-feedback"]')).toBeVisible()
+  await page.click('[data-testid="confidence-somewhat-sure"]')
+  await expect(page.locator('[data-testid="quiz-question"]')).toBeVisible() // Next question loads
+})
+
+// FLOW 3: Review Queue
+test("review flow — due items surface and update schedule", async ({ page }) => {
+  await page.goto("/review")
+  const hasItems = await page.locator('[data-testid="review-item"]').count()
+  // If items exist, complete one and verify schedule updates
+  if (hasItems > 0) {
+    await page.click('[data-testid="quiz-option-0"]')
+    await page.click('[data-testid="confidence-knew-it"]')
+    await expect(page.locator('[data-testid="review-complete"]')
+      .or(page.locator('[data-testid="review-item"]'))).toBeVisible()
+  } else {
+    await expect(page.locator('[data-testid="review-empty"]')).toBeVisible()
+  }
+})
+```
+
+**Step 1: Run to verify all 3 fail (expected — app not built yet)**
+```bash
+npx playwright test e2e/critical-flows.spec.ts
+```
+Expected: 3 FAIL. This is correct — these are the acceptance tests for the entire build.
+
+**Step 2: Commit**
+```bash
+git add e2e/critical-flows.spec.ts
+git commit -m "test: E2E acceptance tests for 3 critical user flows — currently failing (expected)"
+```
+
+---
+
+## ✅ CHECKPOINT 0 — Test Infrastructure
+
+**Verify before proceeding:**
+```bash
+# Backend
+cd backend && pytest tests/test_smoke.py -v
+# Expected: 1 PASSED
+
+# Frontend
+cd ../frontend && npm test
+# Expected: 1 PASSED
+
+# E2E smoke (requires services running)
+cd .. && npx playwright test e2e/smoke.spec.ts
+# Expected: 1 PASSED
+
+# E2E critical flows (expected to fail — that's correct)
+npx playwright test e2e/critical-flows.spec.ts
+# Expected: 3 FAILED — this confirms they're wired, not broken
+```
+
+- [ ] `pytest tests/test_smoke.py` — 1 PASS
+- [ ] `npm test` in frontend — 1 PASS
+- [ ] `playwright test e2e/smoke.spec.ts` — 1 PASS
+- [ ] `playwright test e2e/critical-flows.spec.ts` — 3 FAIL (this is correct)
+- [ ] Coverage commands run without errors on both backend and frontend
+
+**The 3 failing E2E tests are your acceptance criteria for the entire project. When all 3 pass, Zenkai is built.**
 
 ---
 
@@ -442,13 +787,22 @@ git commit -m "feat: Docker Compose for local dev with frontend and backend serv
 
 ## ✅ CHECKPOINT 1 — Foundation
 
-**Verify before proceeding:**
-- [ ] `npm run dev` in `frontend/` starts Next.js on port 3000
-- [ ] `uvicorn main:app --reload` in `backend/` starts FastAPI on port 8000
+```bash
+# Run full backend test suite
+cd backend && pytest tests/ -v
+# Expected: test_health PASS, test_schema_creates_all_tables PASS, test_seed_data_exists PASS
+
+# Verify DB manually
+sqlite3 zenkai.db "SELECT order_index, title, is_unlocked FROM modules ORDER BY order_index;"
+# Expected: 10 rows, order_index 0 has is_unlocked=1
+```
+
+- [ ] `pytest tests/` — 3 PASS, 0 FAIL
+- [ ] `npm run dev` starts Next.js on port 3000
+- [ ] `uvicorn main:app --reload` starts FastAPI on port 8000
 - [ ] `GET /health` returns `{"status":"ok"}`
-- [ ] `pytest tests/test_database.py` — 2 tests pass
-- [ ] `zenkai.db` is created on backend startup with all 11 tables
-- [ ] Module 0 row has `is_unlocked = 1`
+- [ ] `zenkai.db` created with all 11 tables on startup
+- [ ] Module 0 has `is_unlocked = 1`
 - [ ] `docker compose up` brings both services up cleanly
 
 Do not proceed until all 7 items check out.
@@ -646,16 +1000,54 @@ git commit -m "feat: AssetPlaceholder component for missing sprites during devel
 
 ## ✅ CHECKPOINT 2 — Design System
 
-**Verify before proceeding:**
-- [ ] Background is `#09090b`, not white or grey
-- [ ] Font is Geist — visibly NOT Inter (compare: Geist has more character width, rounder glyphs)
-- [ ] `clipped-corners` utility produces diagonal cuts on corners — NO border-radius
-- [ ] `zen-gold`, `zen-plasma`, `zen-sakura` colors render correctly
-- [ ] CSS variables `--register-study-bg` and `--register-battle-bg` are declared in `:root`
-- [ ] `SamuraiButton` renders with clipped corners in all 3 variants
-- [ ] `AssetPlaceholder` renders with correct label and dimensions
+```bash
+# Frontend component tests
+cd frontend && npm test
+# Expected: all tests pass including SamuraiButton and AssetPlaceholder
 
-Do not proceed until all 7 items check out. **Color palette note:** once the full UI is visible, compare `zen-gold` and `zen-plasma` against the Pinterest samurai reference images. They may need adjustment.
+# Add these component tests before running the checkpoint:
+# frontend/tests/SamuraiButton.test.tsx
+# frontend/tests/AssetPlaceholder.test.tsx
+```
+
+```typescript
+// frontend/tests/SamuraiButton.test.tsx
+import { render, screen } from "@testing-library/react"
+import { SamuraiButton } from "@/components/ui/SamuraiButton"
+
+test("renders with clipped-corners class", () => {
+  const { container } = render(<SamuraiButton>Enter</SamuraiButton>)
+  expect(container.firstChild).toHaveClass("clipped-corners")
+})
+
+test("renders all three variants without error", () => {
+  const { rerender } = render(<SamuraiButton variant="primary">X</SamuraiButton>)
+  rerender(<SamuraiButton variant="ghost">X</SamuraiButton>)
+  rerender(<SamuraiButton variant="danger">X</SamuraiButton>)
+})
+```
+
+```typescript
+// frontend/tests/AssetPlaceholder.test.tsx
+import { render, screen } from "@testing-library/react"
+import { AssetPlaceholder } from "@/components/ui/AssetPlaceholder"
+
+test("renders asset name as label", () => {
+  render(<AssetPlaceholder name="ronin_idle" width={96} height={128} />)
+  expect(screen.getByText("[ronin_idle]")).toBeInTheDocument()
+})
+```
+
+- [ ] `npm test` — all tests PASS
+- [ ] Background is `#09090b`, not white or grey
+- [ ] Font is Geist — visibly NOT Inter
+- [ ] `clipped-corners` produces diagonal corner cuts — NO `border-radius` anywhere
+- [ ] `zen-gold`, `zen-plasma`, `zen-sakura` colors render correctly
+- [ ] CSS variables `--register-study-bg` and `--register-battle-bg` declared in `:root`
+- [ ] `SamuraiButton` renders correctly in all 3 variants
+- [ ] `AssetPlaceholder` renders with correct label
+
+**Color palette note:** once the full UI is visible, compare `zen-gold` and `zen-plasma` against the Pinterest samurai reference images. They may need adjustment.
 
 ---
 
@@ -1280,12 +1672,12 @@ git commit -m "feat: pipeline orchestrator with delta detection and per-concept 
 
 ## ✅ CHECKPOINT 3 — Content Pipeline
 
-**Verify before proceeding:**
-
-1. Set `KB_PATH` in your `.env` to the local AI-Knowledgebase path
-2. Run the pipeline manually:
 ```bash
-cd backend
+# Full backend test suite — must include all pipeline unit tests
+cd backend && pytest tests/ -v --tb=short
+# Expected: ALL tests pass (smoke + database + kb_reader + claude_client + sm2 + orchestrator)
+
+# Run pipeline on Module 1 manually
 python -c "
 import asyncio
 from dotenv import load_dotenv
@@ -1295,16 +1687,28 @@ import os
 result = asyncio.run(run_pipeline_for_module(2, os.getenv('KB_PATH')))
 print(result)
 "
+
+# Inspect results in SQLite
+sqlite3 zenkai.db "SELECT title, length(default_layer) as dl_len, content_hash FROM concepts WHERE module_id=2;"
+
+# Verify delta detection — re-run pipeline, confirm all skipped
+python -c "
+import asyncio
+from dotenv import load_dotenv
+load_dotenv()
+from pipeline.orchestrator import run_pipeline_for_module
+import os
+result = asyncio.run(run_pipeline_for_module(2, os.getenv('KB_PATH')))
+print('skipped:', len(result['skipped']), 'generated:', len(result['generated']))
+"
 ```
-Expected: All concepts in Module 1 (Prompt Engineering) generated. Check SQLite:
-```bash
-sqlite3 zenkai.db "SELECT title, length(default_layer) as dl_len FROM concepts WHERE module_id=2;"
-```
-- [ ] At least 5 concepts generated
-- [ ] `default_layer` column has valid JSON (length > 100 per concept)
-- [ ] `content_hash` populated for each concept
-- [ ] Re-running pipeline shows all concepts in `skipped` (delta detection working)
-- [ ] All 6 pipeline tests pass: `pytest backend/tests/ -v`
+
+- [ ] `pytest tests/` — all PASS (minimum 10 tests at this point)
+- [ ] At least 5 concepts generated for Module 1
+- [ ] `default_layer` has valid JSON (length > 100) for every concept
+- [ ] `content_hash` populated for every concept
+- [ ] Re-run shows `generated: 0`, `skipped: N` — delta detection working
+- [ ] `pipeline_log` table has entries for the run: `sqlite3 zenkai.db "SELECT * FROM pipeline_log LIMIT 5;"`
 
 ---
 
@@ -1405,23 +1809,58 @@ git commit -m "feat: [router name] router"
 
 ## ✅ CHECKPOINT 4 — Backend API
 
-**Verify before proceeding:**
+Add integration tests for every router before running the checkpoint:
 
-```bash
-# Test all key endpoints
-http GET http://localhost:8000/modules
-http GET http://localhost:8000/modules/1
-http GET http://localhost:8000/concepts/1
-http GET http://localhost:8000/concepts/1/quiz
-http GET http://localhost:8000/character
-http POST http://localhost:8000/sessions/start
+```python
+# backend/tests/test_api_modules.py
+async def test_list_modules_returns_10(client):
+    r = await client.get("/modules")
+    assert r.status_code == 200
+    assert len(r.json()) == 10
+
+async def test_module_0_is_unlocked(client):
+    r = await client.get("/modules")
+    module_0 = next(m for m in r.json() if m["order_index"] == 0)
+    assert module_0["is_unlocked"] is True
+
+async def test_module_not_found_returns_404(client):
+    r = await client.get("/modules/9999")
+    assert r.status_code == 404
+
+async def test_module_detail_includes_concepts(client):
+    r = await client.get("/modules/1")
+    assert r.status_code == 200
+    assert "concepts" in r.json()
 ```
 
-- [ ] All endpoints return 200 with valid JSON
-- [ ] 404 returns properly formatted error for unknown IDs
-- [ ] `GET /modules` returns all 10 modules
-- [ ] `GET /concepts/1` includes all four JSON fields (default_layer, deep_layer, prediction_question, worked_example)
-- [ ] `POST /progress` correctly updates `review_schedule` with new SM-2 values
+```python
+# backend/tests/test_api_progress.py
+async def test_post_progress_updates_review_schedule(client):
+    # Requires a concept to exist — seed one first
+    r = await client.post("/progress", json={
+        "user_id": 1,
+        "concept_id": 1,
+        "answered_correctly": True,
+        "confidence": "knew_it",
+        "time_spent_ms": 4200
+    })
+    assert r.status_code == 200
+    data = r.json()
+    assert "next_review_at" in data
+    assert data["interval_days"] > 1.0  # SM-2 increased the interval
+```
+
+```bash
+cd backend && pytest tests/ -v --cov=. --cov-report=term-missing
+# Expected: ALL tests pass — minimum 18 tests at this point
+```
+
+- [ ] `pytest tests/` — all PASS, 0 FAIL
+- [ ] `GET /modules` returns 10 modules
+- [ ] `GET /modules/1` includes `"concepts"` array
+- [ ] `GET /modules/9999` returns 404
+- [ ] `POST /progress` returns updated SM-2 state with `next_review_at`
+- [ ] `GET /progress/review-queue` returns valid array (empty is fine at this stage)
 
 ---
 
@@ -1510,13 +1949,65 @@ git commit -m "feat: learn page — full concept reading flow with all component
 
 ## ✅ CHECKPOINT 5 — Core Learning UI
 
-**Verify before proceeding:**
-- [ ] Navigate to `/learn/1/1` — renders prediction question, then concept card, then worked example
-- [ ] "Go Deeper" animates open smoothly (no snap/jump)
-- [ ] Confidence chips submit to backend and return 200
-- [ ] Confidence chips show candle/flame/fire icons — NOT text labels
-- [ ] Zero border-radius anywhere on screen — all clipped corners
-- [ ] Background is study register (`--register-study-bg`) — cool blue-grey tone
+Add component tests before running the checkpoint:
+
+```typescript
+// frontend/tests/ConceptCard.test.tsx
+import { render, screen, fireEvent } from "@testing-library/react"
+import { ConceptCard } from "@/components/learn/ConceptCard"
+
+const mockDefault = { title: "Chain-of-Thought", hook: "Think before answering.", explanation: ["CoT works by..."], analogy: "Like showing your work in math." }
+const mockDeep = { mechanism: ["Step 1", "Step 2"], edge_cases: ["Short prompts"], key_number: "78.7% accuracy", failure_story: "GPT-3 failed when..." }
+
+test("renders hook text", () => {
+  render(<ConceptCard defaultLayer={mockDefault} deepLayer={mockDeep} />)
+  expect(screen.getByText("Think before answering.")).toBeInTheDocument()
+})
+
+test("deep layer hidden by default", () => {
+  render(<ConceptCard defaultLayer={mockDefault} deepLayer={mockDeep} />)
+  expect(screen.queryByText("78.7% accuracy")).not.toBeInTheDocument()
+})
+
+test("Go Deeper reveals deep layer", () => {
+  render(<ConceptCard defaultLayer={mockDefault} deepLayer={mockDeep} />)
+  fireEvent.click(screen.getByText("Go Deeper"))
+  expect(screen.getByText("78.7% accuracy")).toBeInTheDocument()
+})
+```
+
+```typescript
+// frontend/tests/ConfidenceChips.test.tsx
+import { render, screen, fireEvent } from "@testing-library/react"
+import { ConfidenceChips } from "@/components/learn/ConfidenceChips"
+
+test("renders all three confidence options", () => {
+  render(<ConfidenceChips onSelect={vi.fn()} />)
+  expect(screen.getByTestId("confidence-guessed")).toBeInTheDocument()
+  expect(screen.getByTestId("confidence-somewhat-sure")).toBeInTheDocument()
+  expect(screen.getByTestId("confidence-knew-it")).toBeInTheDocument()
+})
+
+test("calls onSelect with correct value", () => {
+  const onSelect = vi.fn()
+  render(<ConfidenceChips onSelect={onSelect} />)
+  fireEvent.click(screen.getByTestId("confidence-knew-it"))
+  expect(onSelect).toHaveBeenCalledWith("knew_it")
+})
+```
+
+```bash
+cd frontend && npm test
+# Expected: all component tests PASS
+```
+
+- [ ] `npm test` — all PASS including ConceptCard and ConfidenceChips tests
+- [ ] `/learn/1/1` renders: prediction question → concept card → worked example
+- [ ] "Go Deeper" animates open smoothly
+- [ ] Confidence chips show icons (candle/flame/fire) — NOT plain text labels
+- [ ] `POST /progress` called on confidence selection, returns 200
+- [ ] Zero `border-radius` anywhere — all clipped corners
+- [ ] Background is cool study register tone
 
 ---
 
@@ -1547,13 +2038,61 @@ git commit -m "feat: quiz battle screen — Pokémon layout, streak bar, confide
 
 ## ✅ CHECKPOINT 6 — Quiz Battle
 
-**Verify before proceeding:**
-- [ ] Background visibly shifts from cool (study) to warm (battle) when entering quiz
+```typescript
+// frontend/tests/QuizCard.test.tsx
+import { render, screen, fireEvent } from "@testing-library/react"
+import { QuizCard } from "@/components/quiz/QuizCard"
+
+const mockQuestion = {
+  question: "What does CoT improve?",
+  options: ["Speed", "Accuracy", "Cost", "Latency"],
+  correct_index: 1,
+  explanation: "CoT improves accuracy by forcing step-by-step reasoning."
+}
+
+test("renders question and 4 options", () => {
+  render(<QuizCard question={mockQuestion} onAnswer={vi.fn()} />)
+  expect(screen.getByText("What does CoT improve?")).toBeInTheDocument()
+  expect(screen.getAllByRole("button")).toHaveLength(4)
+})
+
+test("selecting an option calls onAnswer", () => {
+  const onAnswer = vi.fn()
+  render(<QuizCard question={mockQuestion} onAnswer={onAnswer} />)
+  fireEvent.click(screen.getByText("Accuracy"))
+  expect(onAnswer).toHaveBeenCalledWith(1)
+})
+```
+
+```typescript
+// frontend/tests/StreakBar.test.tsx
+import { render, screen } from "@testing-library/react"
+import { StreakBar } from "@/components/quiz/StreakBar"
+
+test("renders 10 segments", () => {
+  const { container } = render(<StreakBar streak={5} />)
+  expect(container.querySelectorAll('[data-testid="streak-segment"]')).toHaveLength(10)
+})
+
+test("fills correct number of segments", () => {
+  const { container } = render(<StreakBar streak={3} />)
+  const filled = container.querySelectorAll('[data-testid="streak-segment"][data-filled="true"]')
+  expect(filled).toHaveLength(3)
+})
+```
+
+```bash
+cd frontend && npm test
+# Expected: QuizCard and StreakBar tests PASS
+```
+
+- [ ] `npm test` — all PASS
+- [ ] Background visibly warm (battle register) on quiz page vs. cool (study register) on learn page
 - [ ] 4 move cards render, selecting one highlights before reveal
-- [ ] Correct answer triggers teal glow, wrong answer triggers screen shake
+- [ ] Correct: teal glow. Wrong: screen shake + red dim.
 - [ ] Confidence chips appear after every answer
-- [ ] `POST /progress` called with correct `answered_correctly` and `confidence` values
-- [ ] StreakBar is pure CSS — no image asset required
+- [ ] `POST /progress` called with correct payload
+- [ ] StreakBar is pure CSS — 10 segments, no image asset
 
 ---
 
@@ -1587,13 +2126,41 @@ Current form displayed large (use `AssetPlaceholder` for sprite). Evolution time
 
 ## ✅ CHECKPOINT 7 — Navigation + Progression
 
-**Verify before proceeding:**
-- [ ] World map renders 10 module nodes in correct order
-- [ ] Locked modules show fog overlay or lock icon
+```python
+# backend/tests/test_progression.py
+async def test_module_unlocks_at_70_percent(client):
+    # Simulate completing module 0 quiz at 70%
+    r = await client.post("/modules/1/complete-quiz", json={"score": 0.70, "user_id": 1})
+    assert r.status_code == 200
+    # Module 1 should now be unlocked
+    r2 = await client.get("/modules/2")
+    assert r2.json()["is_unlocked"] is True
+
+async def test_module_does_not_unlock_below_70(client):
+    r = await client.post("/modules/1/complete-quiz", json={"score": 0.69, "user_id": 1})
+    r2 = await client.get("/modules/2")
+    assert r2.json()["is_unlocked"] is False
+
+async def test_character_form_updates_at_module_3(client):
+    # Complete modules 0-3 at ≥70%
+    for mod_id in range(1, 4):
+        await client.post(f"/modules/{mod_id}/complete-quiz", json={"score": 0.8, "user_id": 1})
+    r = await client.get("/character")
+    assert r.json()["character_form"] == 2  # Warrior
+```
+
+```bash
+cd backend && pytest tests/test_progression.py -v
+cd frontend && npm test
+```
+
+- [ ] `pytest tests/test_progression.py` — all PASS
+- [ ] World map renders 10 module nodes in correct order with correct titles
+- [ ] Locked modules show fog or lock
 - [ ] Module 0 is unlocked by default
-- [ ] Completing a module quiz at ≥70% unlocks the next module
-- [ ] Character sheet shows correct form based on module completion
-- [ ] Navigation between world map → module → quiz → back works without errors
+- [ ] Completing quiz at ≥70% unlocks next module
+- [ ] Character sheet shows correct form at correct thresholds (Warrior after Module 3, Samurai after 6, Ghost after 9)
+- [ ] Navigation: world map → module → quiz → back all work without errors
 
 ---
 
@@ -1610,12 +2177,64 @@ Fetches `GET /progress/review-queue` and presents due concepts as quiz questions
 
 ## ✅ CHECKPOINT 8 — Spaced Repetition
 
-**Verify before proceeding:**
-- [ ] Answer a concept with "Guessed" — verify `next_review_at` is set to ~tomorrow
-- [ ] Answer same concept with "Knew it" — verify `next_review_at` jumps further out
-- [ ] Answer incorrectly — verify interval resets to 1 day and `ease_factor` decreases
-- [ ] Review queue page shows only concepts due today or earlier
-- [ ] SM-2 state updates persist across app restarts
+```python
+# backend/tests/test_review_queue.py
+from datetime import datetime, timedelta
+import aiosqlite
+
+async def test_review_queue_returns_due_items(client, test_db):
+    # Seed a review item due in the past
+    async with aiosqlite.connect(test_db) as db:
+        await db.execute("""
+            INSERT INTO review_schedule (user_id, concept_id, next_review_at, interval_days, ease_factor, repetitions)
+            VALUES (1, 1, ?, 1.0, 2.5, 1)
+        """, (datetime.now() - timedelta(hours=1),))
+        await db.commit()
+    r = await client.get("/progress/review-queue?user_id=1")
+    assert r.status_code == 200
+    assert len(r.json()) >= 1
+
+async def test_review_queue_excludes_future_items(client, test_db):
+    async with aiosqlite.connect(test_db) as db:
+        await db.execute("""
+            INSERT INTO review_schedule (user_id, concept_id, next_review_at, interval_days, ease_factor, repetitions)
+            VALUES (1, 2, ?, 10.0, 2.5, 5)
+        """, (datetime.now() + timedelta(days=5),))
+        await db.commit()
+    r = await client.get("/progress/review-queue?user_id=1")
+    future_items = [i for i in r.json() if i["concept_id"] == 2]
+    assert len(future_items) == 0
+
+async def test_guessed_correct_sets_short_interval(client):
+    r = await client.post("/progress", json={
+        "user_id": 1, "concept_id": 1,
+        "answered_correctly": True, "confidence": "guessed"
+    })
+    assert r.json()["interval_days"] <= 4.0  # Trust a guess less
+
+async def test_knew_it_correct_grows_interval(client):
+    # First answer sets interval, second should grow it
+    await client.post("/progress", json={
+        "user_id": 1, "concept_id": 1,
+        "answered_correctly": True, "confidence": "knew_it"
+    })
+    r = await client.post("/progress", json={
+        "user_id": 1, "concept_id": 1,
+        "answered_correctly": True, "confidence": "knew_it"
+    })
+    assert r.json()["interval_days"] > 2.5
+```
+
+```bash
+cd backend && pytest tests/ -v
+# Expected: ALL tests pass including SM-2 unit tests AND review queue integration tests
+```
+
+- [ ] `pytest tests/` — all PASS
+- [ ] Review queue only returns items where `next_review_at <= NOW`
+- [ ] "Guessed" correct answer produces shorter interval than "Knew it"
+- [ ] Wrong answer resets interval to 1.0 and reduces `ease_factor`
+- [ ] SM-2 state persists — visible in SQLite after restart
 
 ---
 
@@ -1655,6 +2274,60 @@ Wire remaining transitions:
 - [ ] No hardcoded paths or API keys in source code
 - [ ] `.env` is NOT tracked by git
 - [ ] `pipeline_log` table has entries for every generation run
+
+---
+
+## ✅ CHECKPOINT 9 — Polish + Assets
+
+```bash
+# Full test suite — everything must be green before declaring done
+cd backend && pytest tests/ -v --cov=. --cov-report=term-missing
+cd ../frontend && npm test -- --coverage
+```
+
+- [ ] Backend: `pytest` — all PASS, coverage ≥ 70% on `pipeline/` and `routers/`
+- [ ] Frontend: `vitest` — all PASS
+- [ ] PixelLab test sprite (ronin_idle) evaluated — meets Ghost of Tsushima quality bar OR Midjourney fallback used
+- [ ] At least one sprite replaced from placeholder div to real asset in manifest
+- [ ] Framer Motion transitions wired: concept reveal, quiz transition, character evolution
+- [ ] FORGE SPEC particle effect fires on spec exercise submission
+
+---
+
+## Phase E2E — Final Acceptance
+
+Run the 3 critical flow tests written in Phase 0. These were failing then — they must pass now.
+
+```bash
+# Both services must be running
+cd /Users/t-rawww/zenkai
+npx playwright test e2e/critical-flows.spec.ts --reporter=list
+```
+
+Expected output:
+```
+✓ learn flow — read a concept end-to-end
+✓ quiz flow — answer a question with confidence rating
+✓ review flow — due items surface and update schedule
+
+3 passed
+```
+
+**If all 3 pass, Zenkai is built.**
+
+If any fail, use Playwright's trace viewer to diagnose:
+```bash
+npx playwright test e2e/critical-flows.spec.ts --trace on
+npx playwright show-trace test-results/*/trace.zip
+```
+
+### Final commit
+```bash
+cd /Users/t-rawww/zenkai
+git add .
+git commit -m "feat: Zenkai complete — all 3 E2E flows passing"
+git push origin main
+```
 
 ---
 
