@@ -11,7 +11,7 @@ async def get_character(user_id: int = 1):
         async with db.execute("SELECT * FROM users WHERE id=?", (user_id,)) as cur:
             user = await cur.fetchone()
         async with db.execute(
-            "SELECT slot, item_name, item_type FROM character_equipment WHERE user_id=?",
+            "SELECT module_id, equipment_name FROM character_equipment WHERE user_id=? ORDER BY equipped_at",
             (user_id,),
         ) as cur:
             equipment = await cur.fetchall()
