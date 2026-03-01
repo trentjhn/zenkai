@@ -1,3 +1,6 @@
+"use client"
+
+import Link from "next/link"
 import { SamuraiButton } from "@/components/ui/SamuraiButton"
 
 export default function Home() {
@@ -47,8 +50,12 @@ export default function Home() {
         </div>
 
         <div className="flex gap-3">
-          <SamuraiButton className="flex-1">Enter Dōjō</SamuraiButton>
-          <SamuraiButton variant="ghost" className="flex-1">Review</SamuraiButton>
+          <Link href="/world-map" className="flex-1">
+            <SamuraiButton className="w-full">Enter World Map</SamuraiButton>
+          </Link>
+          <Link href="/review" className="flex-1">
+            <SamuraiButton variant="ghost" className="w-full">Review</SamuraiButton>
+          </Link>
         </div>
       </div>
 
