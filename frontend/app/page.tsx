@@ -1,101 +1,74 @@
-import Image from "next/image";
+import { SamuraiButton } from "@/components/ui/SamuraiButton"
 
 export default function Home() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <main className="min-h-screen bg-zen-void flex flex-col items-center justify-center gap-12 p-8">
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+      {/* Header */}
+      <div className="text-center space-y-3">
+        <p className="font-mono text-xs tracking-[0.4em] text-zen-plasma/60 uppercase">
+          Personal AI Learning System
+        </p>
+        <h1 className="font-heading text-6xl font-bold text-zen-gold tracking-tight">
+          ZENKAI
+        </h1>
+        <p className="font-body text-zen-plasma/70 text-sm tracking-widest uppercase">
+          Challenge · Struggle · Recovery · Mastery
+        </p>
+      </div>
+
+      {/* Preview card */}
+      <div className="clipped-corners bg-zen-slate border border-zen-plasma/20 p-8 w-full max-w-md space-y-6">
+        <div className="space-y-1">
+          <p className="font-mono text-[10px] text-zen-plasma/40 uppercase tracking-widest">
+            Current Form
+          </p>
+          <p className="font-heading text-zen-gold text-xl font-semibold">
+            浪人 Ronin
+          </p>
+          <p className="font-body text-zen-plasma/60 text-xs">
+            The path begins. Module 0 unlocked.
+          </p>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+
+        <div className="h-px bg-zen-plasma/10" />
+
+        <div className="grid grid-cols-3 gap-4 text-center">
+          {[
+            { label: "XP", value: "0" },
+            { label: "Streak", value: "0d" },
+            { label: "Modules", value: "0/10" },
+          ].map(({ label, value }) => (
+            <div key={label} className="clipped-corners-sm bg-zen-void p-3">
+              <p className="font-heading text-lg font-bold text-zen-gold">{value}</p>
+              <p className="font-mono text-[9px] text-zen-plasma/40 uppercase tracking-widest">{label}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex gap-3">
+          <SamuraiButton className="flex-1">Enter Dōjō</SamuraiButton>
+          <SamuraiButton variant="ghost" className="flex-1">Review</SamuraiButton>
+        </div>
+      </div>
+
+      {/* Color palette strip — visual design system check */}
+      <div className="flex gap-2">
+        {[
+          { name: "gold",   bg: "bg-zen-gold" },
+          { name: "plasma", bg: "bg-zen-plasma" },
+          { name: "sakura", bg: "bg-zen-sakura" },
+          { name: "teal",   bg: "bg-zen-teal" },
+          { name: "purple", bg: "bg-zen-purple" },
+          { name: "slate",  bg: "bg-zen-slate" },
+        ].map(({ name, bg }) => (
+          <div key={name} className="flex flex-col items-center gap-1">
+            <div className={`clipped-corners-sm w-8 h-8 ${bg}`} />
+            <span className="font-mono text-[8px] text-zen-plasma/30">{name}</span>
+          </div>
+        ))}
+      </div>
+
+    </main>
+  )
 }
