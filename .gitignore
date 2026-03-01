@@ -50,3 +50,10 @@ logs/
 
 # Build artifacts
 *.tsbuildinfo
+
+# Test artifacts
+.coverage
+.pytest_cache/
+test-results/
+playwright-report/
+*.lcov
