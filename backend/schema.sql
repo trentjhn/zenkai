@@ -65,9 +65,10 @@ CREATE TABLE IF NOT EXISTS quiz_questions (
 CREATE TABLE IF NOT EXISTS user_progress (
     id                  INTEGER PRIMARY KEY,
     user_id             INTEGER NOT NULL REFERENCES users(id),
-    quiz_question_id    INTEGER NOT NULL REFERENCES quiz_questions(id),
+    concept_id          INTEGER NOT NULL REFERENCES concepts(id),
+    quiz_question_id    INTEGER REFERENCES quiz_questions(id),   -- NULL for concept reads, set for quiz answers
     answered_correctly  BOOLEAN NOT NULL,
-    confidence          TEXT NOT NULL,                   -- 'guessed', 'somewhat_sure', 'knew_it'
+    confidence          TEXT NOT NULL,                           -- 'guessed', 'somewhat_sure', 'knew_it'
     answered_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     time_spent_ms       INTEGER
 );
@@ -87,6 +88,7 @@ CREATE TABLE IF NOT EXISTS review_schedule (
 CREATE TABLE IF NOT EXISTS sessions (
     id                  INTEGER PRIMARY KEY,
     user_id             INTEGER NOT NULL REFERENCES users(id),
+    module_id           INTEGER REFERENCES modules(id),
     started_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     ended_at            TIMESTAMP,
     questions_answered  INTEGER NOT NULL DEFAULT 0,
