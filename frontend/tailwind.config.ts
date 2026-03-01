@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss"
+import plugin from "tailwindcss/plugin"
 
 const config: Config = {
   darkMode: "class",
@@ -25,7 +26,7 @@ const config: Config = {
     },
   },
   plugins: [
-    function ({ addUtilities }: { addUtilities: (u: object) => void }) {
+    plugin(function ({ addUtilities }) {
       addUtilities({
         ".clipped-corners": {
           "clip-path": "polygon(8px 0%, 100% 0%, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0% 100%, 0% 8px)",
@@ -34,7 +35,7 @@ const config: Config = {
           "clip-path": "polygon(4px 0%, 100% 0%, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0% 100%, 0% 4px)",
         },
       })
-    },
+    }),
   ],
 }
 
