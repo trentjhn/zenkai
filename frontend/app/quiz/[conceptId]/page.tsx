@@ -123,22 +123,15 @@ export default function QuizPage() {
         {/* Battle arena */}
         <div className="grid grid-cols-[1fr_auto] gap-4">
           <div className="space-y-5">
-            <AnimatePresence mode="wait">
-              {phase === "question" ? (
+            {/* Card stays mounted so answer-feedback remains visible during confidence phase */}
+            <QuizBattleCard key={qIndex} question={current} onAnswer={handleAnswer} />
+            <AnimatePresence>
+              {phase === "confidence" && (
                 <motion.div
-                  key={`q-${qIndex}`}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                >
-                  <QuizBattleCard question={current} onAnswer={handleAnswer} />
-                </motion.div>
-              ) : (
-                <motion.div
-                  key={`c-${qIndex}`}
-                  initial={{ opacity: 0, y: 8 }}
+                  key={`conf-${qIndex}`}
+                  initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
+                  exit={{ opacity: 0 }}
                   className="space-y-3"
                 >
                   <p className="text-sm text-zinc-400">How confident were you?</p>

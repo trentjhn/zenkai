@@ -37,12 +37,11 @@ async def get_concept_quiz(concept_id: int):
         results = []
         for row in rows:
             q = dict(row)
-            for field in ("options",):
-                if q.get(field):
-                    try:
-                        q[field] = json.loads(q[field])
-                    except (json.JSONDecodeError, TypeError):
-                        pass
+            if q.get("content"):
+                try:
+                    q["content"] = json.loads(q["content"])
+                except (json.JSONDecodeError, TypeError):
+                    pass
             results.append(q)
         return results
     finally:
