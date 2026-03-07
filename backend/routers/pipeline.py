@@ -2,7 +2,7 @@ import os
 from pydantic import BaseModel
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from backend.database import get_db
-from backend.pipeline.orchestrator import run_pipeline_for_module
+from backend.pipeline.orchestrator import run_pipeline_for_module, generate_quiz_for_module
 
 router = APIRouter(prefix="/pipeline", tags=["pipeline"])
 
@@ -17,6 +17,15 @@ async def sync_module(body: SyncRequest, background_tasks: BackgroundTasks):
     if not kb_path:
         raise HTTPException(status_code=500, detail="KB_PATH not configured")
     background_tasks.add_task(run_pipeline_for_module, body.module_id, kb_path)
+    return {"status": "queued", "module_id": body.module_id}
+
+
+@router.post("/sync-quiz")
+async def sync_quiz(body: SyncRequest, background_tasks: BackgroundTasks):
+    kb_path = os.getenv("KB_PATH")
+    if not kb_path:
+        raise HTTPException(status_code=500, detail="KB_PATH not configured")
+    background_tasks.add_task(generate_quiz_for_module, body.module_id, kb_path)
     return {"status": "queued", "module_id": body.module_id}
 
 

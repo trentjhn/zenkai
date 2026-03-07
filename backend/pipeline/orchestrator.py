@@ -16,7 +16,7 @@ from backend.pipeline.kb_reader import (
     compute_section_hash,
 )
 from backend.pipeline.claude_client import generate_with_claude, SONNET, HAIKU
-from backend.pipeline.prompts import prompt_1a, prompt_1b, prompt_1c, prompt_1d
+from backend.pipeline.prompts import prompt_1a, prompt_1b, prompt_1c, prompt_1d, prompt_3
 from backend.database import get_db
 
 logger = logging.getLogger(__name__)
@@ -145,6 +145,87 @@ async def run_pipeline_for_module(module_id: int, kb_path: str) -> dict:
                 results["failed"].append({"title": title, "error": str(e)})
                 logger.error(f"Failed to generate '{title}': {e}")
                 await _log_pipeline(db, module_id, concept_id, "generation", SONNET, False, str(e))
+
+    finally:
+        await db.close()
+
+    return results
+
+
+async def generate_quiz_for_module(module_id: int, kb_path: str) -> dict:
+    """
+    Generate 3 MC quiz questions per concept for a module (prompt_3).
+    Skips concepts that already have quiz questions — idempotent.
+    Returns {generated: [titles], skipped: [titles], failed: [...]}.
+    """
+    db = await get_db()
+    results: dict = {"module_id": module_id, "generated": [], "skipped": [], "failed": []}
+
+    try:
+        async with db.execute("SELECT * FROM modules WHERE id=?", (module_id,)) as cursor:
+            module = await cursor.fetchone()
+        if not module:
+            raise ValueError(f"Module {module_id} not found")
+
+        kb_source = module["kb_source_path"]
+        if not kb_source:
+            logger.info(f"Module {module_id} has no KB source — skipping quiz generation")
+            return results
+
+        doc_text = read_kb_doc(kb_path, kb_source)
+
+        async with db.execute(
+            "SELECT id, title FROM concepts WHERE module_id=? ORDER BY order_index",
+            (module_id,),
+        ) as cursor:
+            concepts = await cursor.fetchall()
+
+        for concept in concepts:
+            concept_id = concept["id"]
+            title = concept["title"]
+
+            # Skip if questions already exist
+            async with db.execute(
+                "SELECT COUNT(*) as n FROM quiz_questions WHERE concept_id=?",
+                (concept_id,),
+            ) as cursor:
+                row = await cursor.fetchone()
+            if row["n"] > 0:
+                results["skipped"].append(title)
+                logger.info(f"Quiz already exists, skipping: {title}")
+                continue
+
+            section = extract_concept_section(doc_text, title)
+            if not section:
+                results["failed"].append({"title": title, "error": "Section not found in KB"})
+                continue
+
+            try:
+                questions = await generate_with_claude(
+                    prompt_3(title, section),
+                    model=HAIKU,
+                    expected_fields=[],  # returns a list — validated below
+                )
+                # prompt_3 returns a list, not a dict
+                if not isinstance(questions, list):
+                    raise ValueError(f"Expected list, got {type(questions)}")
+
+                for q in questions:
+                    await db.execute(
+                        """INSERT INTO quiz_questions (concept_id, question_type, content)
+                           VALUES (?, ?, ?)""",
+                        (concept_id, q.get("type", "mc"), json.dumps(q)),
+                    )
+
+                await db.commit()
+                await _log_pipeline(db, module_id, concept_id, "3", HAIKU, True)
+                results["generated"].append(title)
+                logger.info(f"Quiz generated: {title}")
+
+            except Exception as e:
+                results["failed"].append({"title": title, "error": str(e)})
+                logger.error(f"Quiz generation failed for '{title}': {e}")
+                await _log_pipeline(db, module_id, concept_id, "3", HAIKU, False, str(e))
 
     finally:
         await db.close()
