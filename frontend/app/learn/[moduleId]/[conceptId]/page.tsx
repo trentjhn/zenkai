@@ -8,18 +8,16 @@ import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/queryKeys"
 import { ConceptCard } from "@/components/learn/ConceptCard"
 import { PredictionQuestion } from "@/components/learn/PredictionQuestion"
-import { WorkedExample } from "@/components/learn/WorkedExample"
 import { ConfidenceChips } from "@/components/learn/ConfidenceChips"
-import { AssetPlaceholder } from "@/components/ui/AssetPlaceholder"
+import { RoninSprite } from "@/components/ui/RoninSprite"
 
-type Stage = "prediction" | "concept" | "example" | "confidence"
+type Stage = "prediction" | "concept"
 
 export default function LearnPage() {
   const { moduleId, conceptId } = useParams<{ moduleId: string; conceptId: string }>()
   const router = useRouter()
   const [stage, setStage] = useState<Stage>("prediction")
   const [startMs] = useState(Date.now())
-  const [predictionAnswered, setPredictionAnswered] = useState(false)
 
   const conceptIdNum = Number(conceptId)
   const moduleIdNum = Number(moduleId)
@@ -43,6 +41,7 @@ export default function LearnPage() {
       if (next) {
         router.push(`/learn/${moduleId}/${next.id}`)
       } else {
+        sessionStorage.setItem("zenkai-just-completed", String(moduleIdNum))
         router.push(`/world-map`)
       }
     },
@@ -101,27 +100,13 @@ export default function LearnPage() {
             >
               <PredictionQuestion
                 data={concept.prediction_question}
-                onAnswer={() => setPredictionAnswered(true)}
+                onAnswer={() => setStage("concept")}
                 revealed={false}
               />
-              {predictionAnswered && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="mt-4 flex justify-end"
-                >
-                  <button
-                    onClick={() => setStage("concept")}
-                    className="text-xs font-semibold uppercase tracking-widest text-zen-plasma hover:opacity-70"
-                  >
-                    See the explanation →
-                  </button>
-                </motion.div>
-              )}
             </motion.div>
           )}
 
-          {/* Stage: Concept */}
+          {/* Stage: Concept — card + confidence chips always visible together */}
           {stage === "concept" && (
             <motion.div
               key="concept"
@@ -130,70 +115,24 @@ export default function LearnPage() {
               exit={{ opacity: 0, y: -8 }}
               className="space-y-6"
             >
-              {/* Character placeholder */}
               <div className="flex items-start gap-4">
-                <AssetPlaceholder
-                  label="Ronin sprite"
-                  className="h-16 w-16 shrink-0"
-                />
+                <RoninSprite animation="breathing-idle" direction="south" scale={1} className="shrink-0" />
                 <ConceptCard
                   defaultLayer={concept.default_layer}
                   deepLayer={concept.deep_layer}
                 />
               </div>
 
-              <div className="flex justify-end">
-                <button
-                  onClick={() => setStage("example")}
-                  className="text-xs font-semibold uppercase tracking-widest text-zen-plasma hover:opacity-70"
-                >
-                  See worked example →
-                </button>
+              <div className="space-y-3 border-t border-zinc-800 pt-5">
+                <p className="text-sm text-zinc-400">How well did you know this?</p>
+                <ConfidenceChips
+                  onSelect={handleConfidence}
+                  disabled={progressMutation.isPending}
+                />
+                {progressMutation.isPending && (
+                  <p className="text-xs text-zinc-600">Saving...</p>
+                )}
               </div>
-            </motion.div>
-          )}
-
-          {/* Stage: Worked example */}
-          {stage === "example" && (
-            <motion.div
-              key="example"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              className="space-y-6"
-            >
-              <WorkedExample data={concept.worked_example} />
-
-              <div className="flex justify-end">
-                <button
-                  onClick={() => setStage("confidence")}
-                  className="text-xs font-semibold uppercase tracking-widest text-zen-plasma hover:opacity-70"
-                >
-                  Rate your confidence →
-                </button>
-              </div>
-            </motion.div>
-          )}
-
-          {/* Stage: Confidence */}
-          {stage === "confidence" && (
-            <motion.div
-              key="confidence"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              className="space-y-4"
-            >
-              <p className="text-sm text-zinc-400">
-                How well did you know this concept?
-              </p>
-              <ConfidenceChips
-                onSelect={handleConfidence}
-                disabled={progressMutation.isPending}
-              />
-              {progressMutation.isPending && (
-                <p className="text-xs text-zinc-600">Saving...</p>
-              )}
             </motion.div>
           )}
         </AnimatePresence>
