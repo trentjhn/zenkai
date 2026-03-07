@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef } from "react"
-import { Application, Assets, Sprite, Graphics, ColorMatrixFilter, Ticker } from "pixi.js"
+import { Application, Assets, Container, Sprite, Graphics, ColorMatrixFilter, Ticker } from "pixi.js"
 import { addBiomeParticles } from "@/lib/mapParticles"
 import type { WorldMapLocation } from "@/lib/worldMapConfig"
 import type { Module } from "@/lib/types"

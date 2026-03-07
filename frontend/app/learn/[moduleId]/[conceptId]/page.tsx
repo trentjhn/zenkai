@@ -10,6 +10,7 @@ import { ConceptCard } from "@/components/learn/ConceptCard"
 import { PredictionQuestion } from "@/components/learn/PredictionQuestion"
 import { ConfidenceChips } from "@/components/learn/ConfidenceChips"
 import { RoninSprite } from "@/components/ui/RoninSprite"
+import { AppHeader } from "@/components/ui/AppHeader"
 
 type Stage = "prediction" | "concept"
 
@@ -74,20 +75,14 @@ export default function LearnPage() {
   }
 
   return (
-    <div className="register-study min-h-screen px-6 py-10">
+    <>
+      <AppHeader
+        backHref="/world-map"
+        backLabel="World Map"
+        pageTitle={concept.title}
+      />
+    <div className="register-study min-h-screen px-6 pt-[104px] pb-10">
       <div className="mx-auto max-w-2xl space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => router.push(`/world-map`)}
-            className="text-xs uppercase tracking-widest text-zinc-600 hover:text-zinc-400"
-          >
-            ← World Map
-          </button>
-          <p className="text-xs uppercase tracking-widest text-zinc-600">
-            {concept.title}
-          </p>
-        </div>
 
         <AnimatePresence mode="wait">
           {/* Stage: Prediction */}
@@ -138,5 +133,6 @@ export default function LearnPage() {
         </AnimatePresence>
       </div>
     </div>
+    </>
   )
 }
