@@ -41,11 +41,12 @@ export default function WorldMapPage() {
     }
   }, [])
 
-  // Current module = first unlocked module without a quiz score
+  // Current module = first learnable (mapped in LOCATIONS) unlocked module without a quiz score.
+  // Excludes "AI PM Foundations" (DB id 1) which is KB context, not a learnable module.
+  const locationIds = new Set(LOCATIONS.map((l) => l.moduleId))
   const currentModuleId =
-    modules?.find((m) => m.is_unlocked && m.quiz_score_achieved === null)?.id ??
-    modules?.[0]?.id ??
-    1
+    modules?.find((m) => locationIds.has(m.id) && m.is_unlocked && m.quiz_score_achieved === null)?.id ??
+    LOCATIONS[0].moduleId
 
   const selectedLocation = selectedModuleId ? getLocationByModuleId(selectedModuleId) : null
 
