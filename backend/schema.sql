@@ -124,12 +124,14 @@ CREATE TABLE IF NOT EXISTS pipeline_log (
     run_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Seed default user and all 10 modules (Module 0 always unlocked)
+-- Seed default user and all 10 modules.
+-- Module 0 (AI PM Foundations) = KB context only, always unlocked.
+-- Module 1 (Prompt Engineering) = first learnable module, seeded unlocked so Trenton can start immediately.
 INSERT OR IGNORE INTO users (id, username) VALUES (1, 'trenton');
 
 INSERT OR IGNORE INTO modules (order_index, title, kb_source_path, pm_context_path, is_unlocked) VALUES
 (0, 'AI PM Foundations',    NULL,                                          'pm-context/ai-pm-role.md',         1),
-(1, 'Prompt Engineering',   'prompt-engineering/prompt-engineering.md',    NULL,                               0),
+(1, 'Prompt Engineering',   'prompt-engineering/prompt-engineering.md',    NULL,                               1),
 (2, 'Context Engineering',  'context-engineering/context-engineering.md',  NULL,                               0),
 (3, 'Reasoning LLMs',       'reasoning-llms/reasoning-llms.md',           NULL,                               0),
 (4, 'Agentic Engineering',  'agentic-engineering/agentic-engineering.md',  NULL,                               0),
