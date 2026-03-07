@@ -20,7 +20,7 @@ describe("worldMapConfig", () => {
   })
 
   it("getLocationByModuleId returns correct location", () => {
-    const loc = getLocationByModuleId(1)
+    const loc = getLocationByModuleId(2)
     expect(loc?.name).toBe("Cherry Blossom Village")
   })
 
@@ -28,8 +28,8 @@ describe("worldMapConfig", () => {
     expect(getLocationByModuleId(99)).toBeUndefined()
   })
 
-  it("module IDs are 1-9", () => {
+  it("module IDs are 2-10 (DB IDs for the 9 learnable modules)", () => {
     const ids = LOCATIONS.map((l) => l.moduleId).sort((a, b) => a - b)
-    expect(ids).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9])
+    expect(ids).toEqual([2, 3, 4, 5, 6, 7, 8, 9, 10])
   })
 })

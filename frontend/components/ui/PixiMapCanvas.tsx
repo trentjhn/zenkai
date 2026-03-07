@@ -51,6 +51,8 @@ export function PixiMapCanvas({
     if (!containerRef.current) return
 
     let app: Application | null = null
+    let initialized = false
+    let cancelled = false
     const cleanupHandlers: (() => void)[] = []
 
     async function init() {
@@ -66,11 +68,12 @@ export function PixiMapCanvas({
         antialias: false,
       })
 
-      // containerRef may have unmounted while awaiting init
-      if (!containerRef.current) {
+      // Guard: cleanup may have fired while init was awaiting (React Strict Mode)
+      if (cancelled || !containerRef.current) {
         app.destroy()
         return
       }
+      initialized = true
 
       containerRef.current.appendChild(app.canvas as HTMLCanvasElement)
 
@@ -257,8 +260,11 @@ export function PixiMapCanvas({
     })
 
     return () => {
+      cancelled = true
       cleanupHandlers.forEach((fn) => fn())
-      if (app) {
+      // Only destroy if init completed — avoids "this._cancelResize is not a function"
+      // when React Strict Mode runs cleanup before app.init() resolves
+      if (app && initialized) {
         app.destroy()
       }
     }

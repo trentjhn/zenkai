@@ -48,9 +48,9 @@ test("world-map → tap location → panel opens → Enter Dojo → learn page",
   await expect(page.locator("canvas")).toBeVisible({ timeout: 8000 })
   await expect(page.locator("text=浪人 Ronin")).toBeVisible({ timeout: 8000 })
 
-  // Trigger module 1 tap via test hook (bypasses WebGL canvas)
+  // Trigger module 2 tap via test hook (DB id 2 = Prompt Engineering / Cherry Blossom Village)
   await page.evaluate(() => {
-    ;(window as Window & { __zenkaiTapModule?: (id: number) => void }).__zenkaiTapModule?.(1)
+    ;(window as Window & { __zenkaiTapModule?: (id: number) => void }).__zenkaiTapModule?.(2)
   })
 
   // Location panel should slide up
@@ -59,8 +59,8 @@ test("world-map → tap location → panel opens → Enter Dojo → learn page",
   // Click Enter Dojo
   await page.click("text=Enter Dōjō")
 
-  // Should navigate to learn page
-  await page.waitForURL(/\/learn\/1\//, { timeout: 8000 })
+  // Should navigate to learn page for module 2
+  await page.waitForURL(/\/learn\/2\//, { timeout: 8000 })
 })
 
 // FLOW 5: World Map — tap locked location → shows locked message
@@ -68,9 +68,9 @@ test("world-map → tap locked location → shows locked message", async ({ page
   await page.goto("/world-map")
   await expect(page.locator("canvas")).toBeVisible({ timeout: 8000 })
 
-  // Module 9 is locked (only module 1 is seeded as unlocked)
+  // Module 10 (Summit Sanctum) is locked (only module 2 is seeded as unlocked)
   await page.evaluate(() => {
-    ;(window as Window & { __zenkaiTapModule?: (id: number) => void }).__zenkaiTapModule?.(9)
+    ;(window as Window & { __zenkaiTapModule?: (id: number) => void }).__zenkaiTapModule?.(10)
   })
 
   await expect(page.locator("text=Summit Sanctum")).toBeVisible({ timeout: 5000 })
