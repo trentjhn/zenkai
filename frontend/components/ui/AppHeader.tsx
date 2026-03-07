@@ -38,6 +38,21 @@ export function AppHeader({
   const [displayXp, setDisplayXp] = useState(targetXp)
   const prevXp = useRef(targetXp)
 
+  /**
+   * Smart back navigation:
+   * - If browser has history (user navigated here from another page), go back
+   *   one step in real history — works for any depth of navigation.
+   * - If history is empty (user landed directly on this URL via bookmark or
+   *   direct link), fall back to the canonical parent defined by backHref.
+   */
+  function handleBack() {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back()
+    } else if (backHref) {
+      router.push(backHref)
+    }
+  }
+
   useEffect(() => {
     if (targetXp === prevXp.current) return
     const start = prevXp.current
@@ -78,7 +93,7 @@ export function AppHeader({
       <div className="absolute left-0 top-0 h-full flex items-center pl-3">
         {backHref && (
           <motion.button
-            onClick={() => router.push(backHref)}
+            onClick={handleBack}
             whileHover={{ x: -2 }}
             whileTap={{ scale: 0.96 }}
             transition={{ type: "spring", stiffness: 350, damping: 22 }}
