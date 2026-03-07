@@ -1,0 +1,48 @@
+{
+  "last_updated": "2026-03-01T00:00:00Z",
+  "assets": {
+    "ronin_idle": {
+      "path": "public/assets/sprites/ronin_idle.png",
+      "status": "processing",
+      "source": "pixellab",
+      "pixellab_id": "ecfe99e9-f7a2-46ea-b7da-2993ab080572",
+      "notes": "4 directions, 96px canvas, stylized proportions, detailed shading"
+    },
+    "warrior_battle": {
+      "path": "public/assets/sprites/warrior_battle_idle.png",
+      "status": "placeholder",
+      "source": "pending",
+      "notes": "Form 2 Warrior — batch after ronin_idle passes quality check"
+    },
+    "evolution_strip": {
+      "path": "public/assets/sprites/evolution_forms_strip.png",
+      "status": "placeholder",
+      "source": "pending",
+      "notes": "All 4 forms side-by-side — generate after all forms pass quality check"
+    },
+    "avatar_sm": {
+      "path": "public/assets/sprites/avatar_ronin_sm.png",
+      "status": "placeholder",
+      "source": "pending",
+      "notes": "32x48 corner nav avatar — derive from ronin_idle south direction"
+    },
+    "map_base": {
+      "path": "public/assets/map/map-base.png",
+      "status": "placeholder",
+      "source": "pending",
+      "notes": "Feudal Japan overworld, 1600x1000px — generate after character passes check"
+    },
+    "fog_overlay": {
+      "path": "public/assets/map/fog-overlay.png",
+      "status": "css_alternative",
+      "source": "css",
+      "notes": "Semi-transparent mist — implement as CSS gradient/blur overlay for V1"
+    },
+    "streak_bar": {
+      "path": "public/assets/ui/segmented_bar_texture.png",
+      "status": "css_alternative",
+      "source": "css",
+      "notes": "10-segment streak bar — built in CSS, no image needed"
+    }
+  }
+}
