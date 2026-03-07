@@ -103,7 +103,12 @@ export default function WorldMapPage() {
 
   return (
     <div className="fixed inset-0 bg-zen-void select-none">
-      <AppHeader character={character} targetXp={character.total_xp} />
+      <AppHeader
+        character={character}
+        targetXp={character.total_xp}
+        backHref="/"
+        backLabel="Home"
+      />
 
       <PixiMapCanvas
         locations={LOCATIONS}
