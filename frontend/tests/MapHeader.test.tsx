@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest"
-import { render, screen } from "@testing-library/react"
+import { render, screen, act } from "@testing-library/react"
 import { MapHeader } from "@/components/ui/MapHeader"
 
 vi.mock("@/components/ui/RoninSprite", () => ({
@@ -36,5 +36,23 @@ describe("MapHeader", () => {
   it("renders correct form name for form 2", () => {
     render(<MapHeader character={{ ...mockChar, character_form: 2 }} targetXp={240} />)
     expect(screen.getByText("Warrior")).toBeInTheDocument()
+  })
+
+  it("starts displaying the initial XP without animation", () => {
+    render(<MapHeader character={mockChar} targetXp={240} />)
+    expect(screen.getByText("240 XP")).toBeInTheDocument()
+  })
+
+  it("animates XP count-up when targetXp prop increases", async () => {
+    vi.useFakeTimers({ toFake: ["requestAnimationFrame", "setTimeout", "performance"] })
+    const { rerender } = render(<MapHeader character={mockChar} targetXp={100} />)
+    expect(screen.getByText("100 XP")).toBeInTheDocument()
+
+    rerender(<MapHeader character={{ ...mockChar, total_xp: 200 }} targetXp={200} />)
+
+    // Advance well past the 1200ms animation duration to reach the final value
+    await act(async () => { vi.advanceTimersByTime(2000) })
+    expect(screen.getByText("200 XP")).toBeInTheDocument()
+    vi.useRealTimers()
   })
 })
