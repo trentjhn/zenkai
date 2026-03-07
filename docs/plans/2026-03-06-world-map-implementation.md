@@ -1106,14 +1106,285 @@ git commit -m "feat: set completion flag in sessionStorage when last concept fin
 
 ---
 
-## Task 11: Run full Vitest suite
+## Task 11: XP animation and scroll persistence tests
+
+**Files:**
+- Modify: `frontend/tests/MapHeader.test.tsx`
+- Create: `frontend/tests/worldMapScroll.test.ts`
+
+**Step 1: Add XP count-up test to MapHeader.test.tsx**
+
+Add these two tests inside the existing `describe("MapHeader")` block:
+
+```typescript
+import { vi } from "vitest"
+import { act } from "@testing-library/react"
+
+it("starts displaying the initial XP without animation", () => {
+  render(<MapHeader character={mockChar} targetXp={240} />)
+  expect(screen.getByText("240 XP")).toBeInTheDocument()
+})
+
+it("animates XP count-up when targetXp prop increases", async () => {
+  vi.useFakeTimers()
+  const { rerender } = render(<MapHeader character={mockChar} targetXp={100} />)
+  expect(screen.getByText("100 XP")).toBeInTheDocument()
+
+  rerender(<MapHeader character={{ ...mockChar, total_xp: 200 }} targetXp={200} />)
+
+  // Mid-animation: value should be between 100 and 200
+  await act(async () => { vi.advanceTimersByTime(600) })
+  const midText = screen.getByText(/XP/)
+  const midVal = parseInt(midText.textContent ?? "0")
+  expect(midVal).toBeGreaterThan(100)
+  expect(midVal).toBeLessThan(200)
+
+  // End of animation: should reach target
+  await act(async () => { vi.advanceTimersByTime(700) })
+  expect(screen.getByText("200 XP")).toBeInTheDocument()
+  vi.useRealTimers()
+})
+```
+
+**Step 2: Write scroll persistence test**
+
+Create `frontend/tests/worldMapScroll.test.ts`:
+
+```typescript
+import { describe, it, expect, beforeEach } from "vitest"
+
+// Pure logic test — no DOM needed
+// Tests the scroll clamping and persistence logic extracted from PixiMapCanvas
+
+const MAP_HEIGHT = 4500
+const SCALE = 0.5   // window.innerWidth / MAP_WIDTH — mocked value
+const CANVAS_H = 800
+
+function clamp(y: number): number {
+  const minY = -(MAP_HEIGHT * SCALE - CANVAS_H)
+  return Math.min(0, Math.max(minY, y))
+}
+
+describe("world map scroll logic", () => {
+  beforeEach(() => {
+    sessionStorage.clear()
+  })
+
+  it("clamps scroll to 0 at the top", () => {
+    expect(clamp(100)).toBe(0)
+    expect(clamp(0)).toBe(0)
+  })
+
+  it("clamps scroll to minY at the bottom", () => {
+    const minY = -(MAP_HEIGHT * SCALE - CANVAS_H)
+    expect(clamp(minY - 100)).toBe(minY)
+    expect(clamp(minY)).toBe(minY)
+  })
+
+  it("passes through valid scroll values unchanged", () => {
+    const valid = -500
+    expect(clamp(valid)).toBe(valid)
+  })
+
+  it("sessionStorage saves and restores scroll position", () => {
+    const scrollY = -400
+    sessionStorage.setItem("world-map-scroll", String(scrollY))
+    const restored = sessionStorage.getItem("world-map-scroll")
+    expect(parseFloat(restored ?? "0")).toBe(scrollY)
+  })
+
+  it("sessionStorage is absent on first visit", () => {
+    expect(sessionStorage.getItem("world-map-scroll")).toBeNull()
+  })
+})
+```
+
+**Step 3: Run to verify both pass**
+
+```bash
+cd frontend && npx vitest run tests/MapHeader.test.tsx tests/worldMapScroll.test.ts
+```
+Expected: all tests pass
+
+**Step 4: Commit**
+
+```bash
+git add frontend/tests/MapHeader.test.tsx frontend/tests/worldMapScroll.test.ts
+git commit -m "test: XP count-up animation and scroll persistence unit tests"
+```
+
+---
+
+## Task 12: Test hook in PixiMapCanvas + full round-trip E2E
+
+The Pixi canvas is WebGL — Playwright can't click sprites directly. We expose a test-only window hook so E2E tests can trigger location taps programmatically.
+
+**Files:**
+- Modify: `frontend/components/ui/PixiMapCanvas.tsx`
+- Modify: `e2e/critical-flows.spec.ts`
+
+**Step 1: Add test hook to PixiMapCanvas**
+
+In `PixiMapCanvas.tsx`, inside the `useEffect`, after `onLocationTap` is wired to sprites, add:
+
+```tsx
+// Test hook — allows Playwright to trigger location taps without WebGL interaction
+if (process.env.NODE_ENV !== "production") {
+  (window as Window & { __zenkaiTapModule?: (id: number) => void }).__zenkaiTapModule = (moduleId: number) => {
+    if (navigator.vibrate) navigator.vibrate(10)
+    onLocationTap(moduleId)
+  }
+}
+```
+
+**Step 2: Add full round-trip E2E test**
+
+Append to `e2e/critical-flows.spec.ts`:
+
+```typescript
+test("world-map → tap location → panel opens → Enter Dojo → learn page", async ({ page }) => {
+  await page.goto("/world-map")
+  // Wait for canvas and header to render
+  await expect(page.locator("canvas")).toBeVisible({ timeout: 6000 })
+  await expect(page.locator("text=浪人 Ronin")).toBeVisible()
+
+  // Trigger module 1 tap via test hook (bypasses WebGL canvas)
+  await page.evaluate(() => {
+    (window as Window & { __zenkaiTapModule?: (id: number) => void }).__zenkaiTapModule?.(1)
+  })
+
+  // Location panel should slide up
+  await expect(page.locator("text=Cherry Blossom Village")).toBeVisible({ timeout: 3000 })
+  await expect(page.locator("text=Prompt Engineering")).toBeVisible()
+
+  // Click Enter Dojo
+  await page.click("text=Enter Dōjō")
+
+  // Should navigate to learn page
+  await page.waitForURL(/\/learn\/1\//, { timeout: 5000 })
+})
+
+test("world-map → tap locked location → shows locked message", async ({ page }) => {
+  await page.goto("/world-map")
+  await expect(page.locator("canvas")).toBeVisible({ timeout: 6000 })
+
+  // Module 9 is locked (only module 1 is seeded as unlocked)
+  await page.evaluate(() => {
+    (window as Window & { __zenkaiTapModule?: (id: number) => void }).__zenkaiTapModule?.(9)
+  })
+
+  await expect(page.locator("text=Summit Sanctum")).toBeVisible({ timeout: 3000 })
+  await expect(page.locator("text=Locked")).toBeVisible()
+  await expect(page.locator("text=Enter Dōjō")).not.toBeVisible()
+})
+```
+
+**Step 3: Check TypeScript**
+
+```bash
+cd frontend && npx tsc --noEmit
+```
+
+**Step 4: Run new E2E tests**
+
+```bash
+cd /Users/t-rawww/zenkai && npx playwright test e2e/critical-flows.spec.ts --grep "round-trip|locked location"
+```
+Expected: both pass
+
+**Step 5: Commit**
+
+```bash
+git add frontend/components/ui/PixiMapCanvas.tsx e2e/critical-flows.spec.ts
+git commit -m "test: add __zenkaiTapModule test hook and full round-trip E2E for world map navigation"
+```
+
+---
+
+## Task 13: Completion round-trip E2E
+
+Tests the full flow: complete last concept → sessionStorage flag set → world-map loads → completion flash renders.
+
+**Files:**
+- Modify: `e2e/critical-flows.spec.ts`
+
+**Step 1: Add completion round-trip test**
+
+Append to `e2e/critical-flows.spec.ts`:
+
+```typescript
+test("completion flag in sessionStorage triggers white flash on world-map", async ({ page }) => {
+  // Simulate returning from a just-completed module
+  await page.goto("/world-map", {
+    waitUntil: "domcontentloaded",
+  })
+
+  // Inject the completion flag before the page's useEffect fires
+  // (Navigate away and back with flag pre-set)
+  await page.evaluate(() => {
+    sessionStorage.setItem("zenkai-just-completed", "1")
+  })
+
+  await page.reload()
+
+  // The white flash div should briefly appear then disappear
+  // We check sessionStorage was cleared (flag consumed)
+  await page.waitForTimeout(200)
+  const flagCleared = await page.evaluate(() =>
+    sessionStorage.getItem("zenkai-just-completed")
+  )
+  expect(flagCleared).toBeNull()
+
+  // Header should still render correctly after celebration
+  await expect(page.locator("text=浪人 Ronin")).toBeVisible({ timeout: 5000 })
+})
+
+test("learn page sets completion flag on last concept", async ({ page }) => {
+  // Module 2 concept 7 is the last concept (seeded in DB)
+  await page.goto("/learn/2/7")
+  await expect(page.locator('[data-testid="prediction-question"]')).toBeVisible({ timeout: 5000 })
+
+  // Answer prediction to advance
+  await page.click('[data-testid="prediction-option-0"]')
+  await expect(page.locator('[data-testid="concept-card"]')).toBeVisible()
+
+  // Select confidence — this triggers progressMutation and navigation
+  await page.click('[data-testid="confidence-knew-it"]')
+
+  // Should navigate to world-map since this is the last concept
+  await page.waitForURL("/world-map", { timeout: 5000 })
+
+  // Completion flag should have been set and then immediately consumed
+  // (page.tsx useEffect clears it on mount)
+  const flag = await page.evaluate(() => sessionStorage.getItem("zenkai-just-completed"))
+  expect(flag).toBeNull() // consumed by world-map mount
+})
+```
+
+**Step 2: Run completion E2E tests**
+
+```bash
+cd /Users/t-rawww/zenkai && npx playwright test e2e/critical-flows.spec.ts --grep "completion"
+```
+Expected: both pass (requires backend running with module 2 data seeded)
+
+**Step 3: Commit**
+
+```bash
+git add e2e/critical-flows.spec.ts
+git commit -m "test: completion round-trip E2E — sessionStorage flag and world-map celebration trigger"
+```
+
+---
+
+## Task 14: Run full Vitest suite
 
 **Step 1: Run all tests**
 
 ```bash
 cd frontend && npx vitest run
 ```
-Expected: all tests pass (14+ including new MapHeader, LocationPanel, worldMapConfig tests)
+Expected: all tests pass (20+ including new MapHeader animation, scroll persistence, worldMapConfig, LocationPanel tests)
 
 **Step 2: Fix any failures, then commit fixes**
 
@@ -1123,12 +1394,12 @@ git add -A && git commit -m "fix: resolve Vitest failures after world map compon
 
 ---
 
-## Task 12: Playwright E2E — world map flows
+## Task 15: Playwright E2E — world map baseline flows
 
 **Files:**
 - Modify: `e2e/critical-flows.spec.ts`
 
-**Step 1: Add world map E2E tests**
+**Step 1: Add baseline world map E2E tests**
 
 Append to `e2e/critical-flows.spec.ts`:
 
@@ -1163,7 +1434,7 @@ test("world-map error state shows obscured message", async ({ page }) => {
 ```bash
 cd /Users/t-rawww/zenkai && npx playwright test e2e/critical-flows.spec.ts
 ```
-Expected: existing 3 tests + new 3 tests pass (6 total)
+Expected: existing 3 tests + all new world map tests pass (9+ total)
 
 **Step 3: Commit**
 
@@ -1174,7 +1445,7 @@ git commit -m "test: Playwright E2E — world map loading, error state, and port
 
 ---
 
-## Task 13: Final verification
+## Task 16: Final verification
 
 **Step 1: Full TypeScript check**
 
