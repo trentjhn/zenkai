@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef } from "react"
-import { Application, Sprite, Graphics, ColorMatrixFilter, Ticker } from "pixi.js"
+import { Application, Assets, Sprite, Graphics, ColorMatrixFilter, Ticker } from "pixi.js"
 import { addBiomeParticles } from "@/lib/mapParticles"
 import type { WorldMapLocation } from "@/lib/worldMapConfig"
 import type { Module } from "@/lib/types"
@@ -80,7 +80,11 @@ export function PixiMapCanvas({
       const scale = window.innerWidth / MAP_WIDTH
       app.stage.scale.set(scale)
 
-      // Background image — placeholder-safe: if file is missing, sprite stays blank
+      // Background image — preload with Assets.load so the texture has real dimensions
+      // before we set width/height. Sprite.from() on an unloaded texture returns a 1x1
+      // placeholder, causing the scale calculation to be wildly wrong.
+      await Assets.load("/assets/map/world-map-bg.png").catch(() => null)
+      if (cancelled) return
       const bg = Sprite.from("/assets/map/world-map-bg.png")
       bg.width = MAP_WIDTH
       bg.height = MAP_HEIGHT
