@@ -9,6 +9,7 @@ import { queryKeys } from "@/lib/queryKeys"
 import { QuizBattleCard, type QuizQuestion } from "@/components/learn/QuizBattleCard"
 import { ConfidenceChips } from "@/components/learn/ConfidenceChips"
 import { AssetPlaceholder } from "@/components/ui/AssetPlaceholder"
+import { AppHeader } from "@/components/ui/AppHeader"
 
 type Phase = "question" | "confidence"
 
@@ -90,17 +91,15 @@ export default function QuizPage() {
   }
 
   return (
-    <div className="register-battle min-h-screen px-6 py-10">
+    <>
+      <AppHeader
+        backHref="/world-map"
+        backLabel="Exit"
+      />
+    <div className="register-battle min-h-screen px-6 pt-[104px] pb-10">
       <div className="mx-auto max-w-2xl space-y-6">
-        {/* Header */}
+        {/* Segmented progress bar */}
         <div className="flex items-center justify-between">
-          <button
-            onClick={() => router.push("/world-map")}
-            className="text-xs uppercase tracking-widest text-zinc-600 hover:text-zinc-400"
-          >
-            ← Exit
-          </button>
-          {/* Segmented streak bar */}
           <div className="flex gap-1">
             {questions.map((_, i) => (
               <div
@@ -152,5 +151,6 @@ export default function QuizPage() {
         </div>
       </div>
     </div>
+    </>
   )
 }
