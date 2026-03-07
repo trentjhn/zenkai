@@ -1,24 +1,25 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/queryKeys"
-import { AssetPlaceholder } from "@/components/ui/AssetPlaceholder"
-import { SamuraiButton } from "@/components/ui/SamuraiButton"
-import { cn } from "@/lib/utils"
-import type { Module } from "@/lib/types"
+import { MapHeader } from "@/components/ui/MapHeader"
+import { PixiMapCanvas } from "@/components/ui/PixiMapCanvas"
+import { LocationPanel } from "@/components/ui/LocationPanel"
+import { LOCATIONS, getLocationByModuleId } from "@/lib/worldMapConfig"
+import type { ModuleDetail } from "@/lib/types"
 
-const FORM_NAMES: Record<number, string> = {
-  1: "Ronin",
-  2: "Warrior",
-  3: "Samurai",
-  4: "The Ghost",
-}
+const HEADER_HEIGHT = 56
 
 export default function WorldMapPage() {
   const router = useRouter()
+  const [selectedModuleId, setSelectedModuleId] = useState<number | null>(null)
+  const [biomeFlashColor, setBiomeFlashColor] = useState<number | null>(null)
+  const [showCompletionFlash, setShowCompletionFlash] = useState(false)
+  const [selectedModuleDetail, setSelectedModuleDetail] = useState<ModuleDetail | null>(null)
 
   const { data: modules, isLoading: modulesLoading } = useQuery({
     queryKey: queryKeys.modules(),
@@ -30,112 +31,127 @@ export default function WorldMapPage() {
     queryFn: api.getCharacter,
   })
 
+  // Module completion celebration trigger
+  useEffect(() => {
+    const completed = sessionStorage.getItem("zenkai-just-completed")
+    if (completed) {
+      setShowCompletionFlash(true)
+      sessionStorage.removeItem("zenkai-just-completed")
+      setTimeout(() => setShowCompletionFlash(false), 600)
+    }
+  }, [])
+
+  // Current module = first unlocked module without a quiz score
+  const currentModuleId =
+    modules?.find((m) => m.is_unlocked && m.quiz_score_achieved === null)?.id ??
+    modules?.[0]?.id ??
+    1
+
+  const selectedLocation = selectedModuleId ? getLocationByModuleId(selectedModuleId) : null
+
+  async function handleLocationTap(moduleId: number) {
+    setSelectedModuleId(moduleId)
+    const detail = await api.getModule(moduleId)
+    setSelectedModuleDetail(detail)
+  }
+
+  async function handleEnterDojo() {
+    if (!selectedModuleId || !selectedLocation || !selectedModuleDetail) return
+    setBiomeFlashColor(selectedLocation.accentColor)
+    const first = selectedModuleDetail.concepts[0]
+    if (first) {
+      setTimeout(() => router.push(`/learn/${selectedModuleId}/${first.id}`), 500)
+    }
+  }
+
+  // Loading state
   if (modulesLoading || charLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-xs uppercase tracking-widest text-zinc-500">Loading...</p>
+      <div className="fixed inset-0 bg-zen-void flex flex-col items-center justify-center gap-3 select-none">
+        <motion.div
+          className="w-8 h-8 border-2 border-zen-plasma/30 border-t-zen-gold rounded-full"
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+        />
+        <p className="font-mono text-[10px] uppercase tracking-widest text-zen-plasma/40">
+          Preparing the path...
+        </p>
       </div>
     )
   }
 
-  async function enterModule(module: Module) {
-    const detail = await api.getModule(module.id)
-    const first = detail.concepts[0]
-    if (first) {
-      router.push(`/learn/${module.id}/${first.id}`)
-    }
+  // Error state
+  if (!modules || !character) {
+    return (
+      <div className="fixed inset-0 bg-zen-void flex flex-col items-center justify-center gap-5 select-none">
+        <div className="clipped-corners border border-zen-sakura/20 bg-zen-slate px-8 py-6 text-center max-w-xs">
+          <p className="font-heading text-zen-gold text-base">The path is obscured.</p>
+          <p className="font-mono text-[10px] text-zen-plasma/40 mt-1 tracking-widest">
+            Could not reach the server.
+          </p>
+        </div>
+        <button
+          onClick={() => window.location.reload()}
+          className="font-mono text-[10px] uppercase tracking-widest text-zen-plasma/60 hover:text-zen-plasma transition-colors"
+        >
+          Retry
+        </button>
+      </div>
+    )
   }
 
   return (
-    <div className="register-study min-h-screen px-6 py-10">
-      <div className="mx-auto max-w-3xl space-y-8">
-        {/* Header — character status */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <AssetPlaceholder label="Samurai sprite" className="h-14 w-10" />
-            <div>
-              <p className="text-xs uppercase tracking-widest text-zinc-500">
-                {FORM_NAMES[character?.character_form ?? 1]}
-              </p>
-              <p className="text-sm font-semibold text-zen-gold">
-                {character?.total_xp ?? 0} XP
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => router.push("/review")}
-              className="text-xs uppercase tracking-widest text-zen-plasma hover:opacity-70"
-            >
-              Review Queue
-            </button>
-          </div>
-        </div>
+    <div className="fixed inset-0 bg-zen-void select-none">
+      <MapHeader character={character} targetXp={character.total_xp} />
 
-        {/* Map placeholder */}
-        <AssetPlaceholder label="World map" className="h-48 w-full" />
+      <PixiMapCanvas
+        locations={LOCATIONS}
+        modules={modules}
+        currentModuleId={currentModuleId}
+        onLocationTap={handleLocationTap}
+        headerHeight={HEADER_HEIGHT}
+      />
 
-        {/* Module region list */}
-        <div className="space-y-3">
-          <p className="text-xs uppercase tracking-widest text-zinc-600">Modules</p>
-          <div className="space-y-2">
-            {modules?.map((module, i) => (
-              <motion.div
-                key={module.id}
-                initial={{ opacity: 0, x: -8 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.04 }}
-                data-testid={`module-${module.order_index}`}
-                className={cn(
-                  "clipped-corners flex items-center justify-between border px-5 py-4",
-                  module.is_unlocked
-                    ? "border-zen-plasma/30 bg-zen-slate"
-                    : "border-zinc-800 bg-zinc-900/50"
-                )}
-              >
-                <div className="flex items-center gap-4">
-                  {/* Fog indicator */}
-                  <div
-                    className={cn(
-                      "h-2 w-2 clipped-corners-sm",
-                      module.is_unlocked ? "bg-zen-plasma" : "bg-zinc-700"
-                    )}
-                  />
-                  <div>
-                    <p
-                      className={cn(
-                        "text-sm font-semibold",
-                        module.is_unlocked ? "text-zinc-100" : "text-zinc-600"
-                      )}
-                    >
-                      {module.title}
-                    </p>
-                    {module.quiz_score_achieved !== null && (
-                      <p className="text-xs text-zinc-500">
-                        Best: {Math.round((module.quiz_score_achieved ?? 0) * 100)}%
-                      </p>
-                    )}
-                  </div>
-                </div>
+      {/* Location slide-up panel */}
+      <AnimatePresence>
+        {selectedModuleId && selectedModuleDetail && selectedLocation && (
+          <LocationPanel
+            key={selectedModuleId}
+            location={selectedLocation}
+            module={selectedModuleDetail}
+            onEnter={handleEnterDojo}
+            onDismiss={() => { setSelectedModuleId(null); setSelectedModuleDetail(null) }}
+          />
+        )}
+      </AnimatePresence>
 
-                {module.is_unlocked ? (
-                  <SamuraiButton
-                    variant="ghost"
-                    onClick={() => enterModule(module)}
-                    className="py-1 text-xs"
-                  >
-                    {module.quiz_score_achieved !== null ? "Revisit Dōjō" : "Enter Dōjō"}
-                  </SamuraiButton>
-                ) : (
-                  <span className="text-xs uppercase tracking-widest text-zinc-700">
-                    Locked
-                  </span>
-                )}
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </div>
+      {/* Enter Dojo — biome color flash */}
+      <AnimatePresence>
+        {biomeFlashColor !== null && (
+          <motion.div
+            className="fixed inset-0 z-[500] pointer-events-none"
+            style={{ backgroundColor: `#${biomeFlashColor.toString(16).padStart(6, "0")}` }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0, 0.35, 0] }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+            onAnimationComplete={() => setBiomeFlashColor(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Module completion — white flash */}
+      <AnimatePresence>
+        {showCompletionFlash && (
+          <motion.div
+            className="fixed inset-0 z-[600] pointer-events-none bg-white"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0, 0.4, 0] }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }
