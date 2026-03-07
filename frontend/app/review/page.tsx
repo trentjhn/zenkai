@@ -6,6 +6,7 @@ import { motion } from "framer-motion"
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/queryKeys"
 import { cn } from "@/lib/utils"
+import { AppHeader } from "@/components/ui/AppHeader"
 
 export default function ReviewPage() {
   const router = useRouter()
@@ -24,19 +25,14 @@ export default function ReviewPage() {
   }
 
   return (
-    <div className="register-study min-h-screen px-6 py-10">
+    <>
+      <AppHeader
+        backHref="/world-map"
+        backLabel="World Map"
+        pageTitle="Review Queue"
+      />
+    <div className="register-study min-h-screen px-6 pt-[104px] pb-10">
       <div className="mx-auto max-w-2xl space-y-6">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => router.push("/world-map")}
-            className="text-xs uppercase tracking-widest text-zinc-600 hover:text-zinc-400"
-          >
-            ← World Map
-          </button>
-          <h1 className="text-sm font-semibold uppercase tracking-widest text-zinc-300">
-            Review Queue
-          </h1>
-        </div>
 
         {!queue || queue.length === 0 ? (
           <div
@@ -68,5 +64,6 @@ export default function ReviewPage() {
         )}
       </div>
     </div>
+    </>
   )
 }

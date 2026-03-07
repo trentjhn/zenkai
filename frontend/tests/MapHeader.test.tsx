@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest"
 import { render, screen, act } from "@testing-library/react"
-import { MapHeader } from "@/components/ui/MapHeader"
+import { AppHeader as MapHeader } from "@/components/ui/AppHeader"
 
 vi.mock("@/components/ui/RoninSprite", () => ({
   RoninSprite: () => <div data-testid="ronin-sprite" />,
