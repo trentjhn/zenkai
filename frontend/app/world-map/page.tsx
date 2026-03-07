@@ -6,13 +6,13 @@ import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/queryKeys"
-import { MapHeader } from "@/components/ui/MapHeader"
+import { AppHeader, APP_HEADER_HEIGHT } from "@/components/ui/AppHeader"
 import { PixiMapCanvas } from "@/components/ui/PixiMapCanvas"
 import { LocationPanel } from "@/components/ui/LocationPanel"
 import { LOCATIONS, getLocationByModuleId } from "@/lib/worldMapConfig"
 import type { ModuleDetail } from "@/lib/types"
 
-const HEADER_HEIGHT = 56
+const HEADER_HEIGHT = APP_HEADER_HEIGHT
 
 export default function WorldMapPage() {
   const router = useRouter()
@@ -103,7 +103,12 @@ export default function WorldMapPage() {
 
   return (
     <div className="fixed inset-0 bg-zen-void select-none">
-      <MapHeader character={character} targetXp={character.total_xp} />
+      <AppHeader
+        character={character}
+        targetXp={character.total_xp}
+        backHref="/"
+        backLabel="Home"
+      />
 
       <PixiMapCanvas
         locations={LOCATIONS}

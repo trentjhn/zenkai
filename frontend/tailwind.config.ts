@@ -6,6 +6,9 @@ const config: Config = {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
   theme: {
     extend: {
+      screens: {
+        xs: "375px",  // iPhone SE / smallest common mobile viewport
+      },
       colors: {
         "zen-gold":   "#F4D03F",
         "zen-void":   "#1A1B26",
