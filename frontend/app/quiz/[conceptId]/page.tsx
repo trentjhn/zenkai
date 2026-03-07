@@ -95,7 +95,6 @@ export default function QuizPage() {
       <AppHeader
         backHref="/world-map"
         backLabel="Exit"
-        pageTitle="Quiz Battle"
       />
     <div className="register-battle min-h-screen px-6 pt-[104px] pb-10">
       <div className="mx-auto max-w-2xl space-y-6">

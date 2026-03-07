@@ -29,7 +29,6 @@ export default function ReviewPage() {
       <AppHeader
         backHref="/world-map"
         backLabel="World Map"
-        pageTitle="Review Queue"
       />
     <div className="register-study min-h-screen px-6 pt-[104px] pb-10">
       <div className="mx-auto max-w-2xl space-y-6">
