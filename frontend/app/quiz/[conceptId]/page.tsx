@@ -76,6 +76,8 @@ export default function QuizPage() {
   }
 
   function handleConfidence(confidence: "knew_it" | "somewhat_sure" | "guessed") {
+    // questions is non-null here — handleConfidence is only reachable via QuizBattleCard
+    // which is gated behind the early-return null check above
     progressMutation.mutate({
       user_id: 1,
       concept_id: conceptIdNum,
@@ -85,8 +87,7 @@ export default function QuizPage() {
     })
 
     if (isLast) {
-      const finalCorrect = score.correct + (lastCorrect ? 1 : 0)
-      sessionStorage.setItem("zenkai-quiz-score", `${finalCorrect}/${questions!.length}`)
+      sessionStorage.setItem("zenkai-quiz-score", `${score.correct}/${questions!.length}`)
       router.push(`/world-map`)
     } else {
       setQIndex((i) => i + 1)
@@ -101,7 +102,7 @@ export default function QuizPage() {
         backLabel="Exit"
         onBack={() => router.push("/world-map")}
       />
-    <div className="register-battle min-h-screen px-6 pt-[104px] pb-10">
+      <div className="register-battle min-h-screen px-6 pt-[104px] pb-10">
       <div className="mx-auto max-w-2xl space-y-6">
         {/* Segmented progress bar */}
         <div className="flex items-center justify-between">
@@ -162,7 +163,7 @@ export default function QuizPage() {
           />
         </div>
       </div>
-    </div>
+      </div>
     </>
   )
 }
