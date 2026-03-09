@@ -22,6 +22,7 @@ export default function QuizPage() {
   const [phase, setPhase] = useState<Phase>("question")
   const [lastCorrect, setLastCorrect] = useState(false)
   const [startMs] = useState(Date.now())
+  const [score, setScore] = useState({ correct: 0, total: 0 })
 
   const { data: questions, isLoading } = useQuery({
     queryKey: [...queryKeys.concept(conceptIdNum), "quiz"],
@@ -70,6 +71,7 @@ export default function QuizPage() {
 
   function handleAnswer(selectedIndex: number, correct: boolean) {
     setLastCorrect(correct)
+    setScore((s) => ({ correct: s.correct + (correct ? 1 : 0), total: s.total + 1 }))
     setPhase("confidence")
   }
 
@@ -83,6 +85,8 @@ export default function QuizPage() {
     })
 
     if (isLast) {
+      const finalCorrect = score.correct + (lastCorrect ? 1 : 0)
+      sessionStorage.setItem("zenkai-quiz-score", `${finalCorrect}/${questions!.length}`)
       router.push(`/world-map`)
     } else {
       setQIndex((i) => i + 1)
@@ -115,9 +119,16 @@ export default function QuizPage() {
               />
             ))}
           </div>
-          <p className="text-xs uppercase tracking-widest text-zinc-600">
-            {qIndex + 1} / {questions.length}
-          </p>
+          <div className="flex items-center gap-3">
+            {score.total > 0 && (
+              <span className="font-mono text-[10px] text-zen-plasma/60 tracking-widest">
+                {score.correct}✓ {score.total - score.correct}✗
+              </span>
+            )}
+            <p className="text-xs uppercase tracking-widest text-zinc-600">
+              {qIndex + 1} / {questions.length}
+            </p>
+          </div>
         </div>
 
         {/* Battle arena */}
