@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { motion, AnimatePresence } from "framer-motion"
@@ -19,6 +19,15 @@ export default function LearnPage() {
   const router = useRouter()
   const [stage, setStage] = useState<Stage>("prediction")
   const [startMs] = useState(Date.now())
+  const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (revealTimerRef.current !== null) {
+        clearTimeout(revealTimerRef.current)
+      }
+    }
+  }, [])
 
   const conceptIdNum = Number(conceptId)
   const moduleIdNum = Number(moduleId)
@@ -97,7 +106,7 @@ export default function LearnPage() {
                 data={concept.prediction_question}
                 onAnswer={() => {
                   // Delay 1500ms so the color-coded reveal and explanation are visible
-                  setTimeout(() => setStage("concept"), 1500)
+                  revealTimerRef.current = setTimeout(() => setStage("concept"), 1500)
                 }}
                 revealed={true}
               />
