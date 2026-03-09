@@ -8,7 +8,7 @@ import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/queryKeys"
 import { QuizBattleCard, type QuizQuestion } from "@/components/learn/QuizBattleCard"
 import { ConfidenceChips } from "@/components/learn/ConfidenceChips"
-import { AssetPlaceholder } from "@/components/ui/AssetPlaceholder"
+import { RoninSprite } from "@/components/ui/RoninSprite"
 import { AppHeader } from "@/components/ui/AppHeader"
 
 type Phase = "question" | "confidence"
@@ -22,6 +22,7 @@ export default function QuizPage() {
   const [phase, setPhase] = useState<Phase>("question")
   const [lastCorrect, setLastCorrect] = useState(false)
   const [startMs] = useState(Date.now())
+  const [score, setScore] = useState({ correct: 0, total: 0 })
 
   const { data: questions, isLoading } = useQuery({
     queryKey: [...queryKeys.concept(conceptIdNum), "quiz"],
@@ -70,10 +71,13 @@ export default function QuizPage() {
 
   function handleAnswer(selectedIndex: number, correct: boolean) {
     setLastCorrect(correct)
+    setScore((s) => ({ correct: s.correct + (correct ? 1 : 0), total: s.total + 1 }))
     setPhase("confidence")
   }
 
   function handleConfidence(confidence: "knew_it" | "somewhat_sure" | "guessed") {
+    // questions is non-null here — handleConfidence is only reachable via QuizBattleCard
+    // which is gated behind the early-return null check above
     progressMutation.mutate({
       user_id: 1,
       concept_id: conceptIdNum,
@@ -83,6 +87,7 @@ export default function QuizPage() {
     })
 
     if (isLast) {
+      sessionStorage.setItem("zenkai-quiz-score", `${score.correct}/${questions!.length}`)
       router.push(`/world-map`)
     } else {
       setQIndex((i) => i + 1)
@@ -95,9 +100,10 @@ export default function QuizPage() {
       <AppHeader
         backHref="/world-map"
         backLabel="Exit"
+        onBack={() => router.push("/world-map")}
       />
-    <div className="register-battle min-h-screen px-6 pt-[104px] pb-10">
-      <div className="mx-auto max-w-2xl space-y-6">
+      <div className="register-battle min-h-[100dvh] px-6 pt-[104px] pb-10">
+        <div className="mx-auto max-w-2xl space-y-6">
         {/* Segmented progress bar */}
         <div className="flex items-center justify-between">
           <div className="flex gap-1">
@@ -114,9 +120,16 @@ export default function QuizPage() {
               />
             ))}
           </div>
-          <p className="text-xs uppercase tracking-widest text-zinc-600">
-            {qIndex + 1} / {questions.length}
-          </p>
+          <div className="flex items-center gap-3">
+            {score.total > 0 && (
+              <span className="font-mono text-[10px] text-zen-plasma/60 tracking-widest">
+                {score.correct}✓ {score.total - score.correct}✗
+              </span>
+            )}
+            <p className="text-xs uppercase tracking-widest text-zinc-600">
+              {qIndex + 1} / {questions.length}
+            </p>
+          </div>
         </div>
 
         {/* Battle arena */}
@@ -143,14 +156,16 @@ export default function QuizPage() {
             </AnimatePresence>
           </div>
 
-          {/* Character placeholder — battle idle */}
-          <AssetPlaceholder
-            label="Battle sprite"
-            className="h-24 w-16 shrink-0 self-start"
+          {/* Character — fight stance */}
+          <RoninSprite
+            animation="fight-stance-idle-8-frames"
+            direction="south"
+            scale={0.9}
+            className="shrink-0 self-start"
           />
         </div>
+        </div>
       </div>
-    </div>
     </>
   )
 }

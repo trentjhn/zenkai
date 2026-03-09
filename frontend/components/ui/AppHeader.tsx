@@ -26,6 +26,8 @@ interface AppHeaderProps {
   backHref?: string
   /** Label for the back button (default: "Back"). */
   backLabel?: string
+  /** When provided, overrides the default smart-back navigation. */
+  onBack?: () => void
 }
 
 export function AppHeader({
@@ -33,6 +35,7 @@ export function AppHeader({
   targetXp = 0,
   backHref,
   backLabel = "Back",
+  onBack,
 }: AppHeaderProps) {
   const router = useRouter()
   const [displayXp, setDisplayXp] = useState(targetXp)
@@ -40,12 +43,17 @@ export function AppHeader({
 
   /**
    * Smart back navigation:
+   * - If onBack override is provided, call it and return immediately.
    * - If browser has history (user navigated here from another page), go back
    *   one step in real history — works for any depth of navigation.
    * - If history is empty (user landed directly on this URL via bookmark or
    *   direct link), fall back to the canonical parent defined by backHref.
    */
   function handleBack() {
+    if (onBack) {
+      onBack()
+      return
+    }
     if (typeof window !== "undefined" && window.history.length > 1) {
       router.back()
     } else if (backHref) {
