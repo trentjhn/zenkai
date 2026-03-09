@@ -30,7 +30,7 @@ export default function ReviewPage() {
         backHref="/world-map"
         backLabel="World Map"
       />
-    <div className="register-study min-h-screen px-6 pt-[104px] pb-10">
+    <div className="register-study min-h-[100dvh] px-6 pt-[104px] pb-10">
       <div className="mx-auto max-w-2xl space-y-6">
 
         {!queue || queue.length === 0 ? (

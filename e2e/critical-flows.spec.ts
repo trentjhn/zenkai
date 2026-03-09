@@ -5,8 +5,8 @@ test("learn flow — read a concept end-to-end", async ({ page }) => {
   // Navigate directly to module 2 / concept 1 (has generated content)
   await page.goto("/learn/2/1")
   await expect(page.locator('[data-testid="prediction-question"]')).toBeVisible()
-  await page.click('[data-testid="prediction-option-0"]') // Answer prediction → auto-advances
-  await expect(page.locator('[data-testid="concept-card"]')).toBeVisible()
+  await page.click('[data-testid="prediction-option-0"]') // Answer prediction — 1500ms reveal delay
+  await expect(page.locator('[data-testid="concept-card"]')).toBeVisible({ timeout: 5000 }) // wait for stage transition
   await expect(page.locator('[data-testid="concept-hook"]')).not.toBeEmpty()
   await page.click('[data-testid="go-deeper-btn"]')
   await expect(page.locator('[data-testid="deep-layer"]')).toBeVisible()
@@ -101,23 +101,24 @@ test("completion flag in sessionStorage triggers white flash on world-map", asyn
   await expect(page.locator("text=浪人 Ronin")).toBeVisible({ timeout: 8000 })
 })
 
-// FLOW 7: Learn page sets completion flag on last concept
-test("learn page sets completion flag on last concept", async ({ page }) => {
+// FLOW 7: Learn last concept → completion page → return to world map
+test("learn last concept navigates to completion page then world-map", async ({ page }) => {
   // Module 2 concept 7 is the last concept (seeded in DB)
   await page.goto("/learn/2/7")
   await expect(page.locator('[data-testid="prediction-question"]')).toBeVisible({ timeout: 8000 })
 
-  // Answer prediction to advance
+  // Answer prediction — there is a 1500ms delay before concept card shows
   await page.click('[data-testid="prediction-option-0"]')
-  await expect(page.locator('[data-testid="concept-card"]')).toBeVisible()
+  await expect(page.locator('[data-testid="concept-card"]')).toBeVisible({ timeout: 5000 })
 
-  // Select confidence — this triggers progressMutation and navigation
+  // Select confidence — triggers progressMutation and navigation to complete page
   await page.click('[data-testid="confidence-knew-it"]')
 
-  // Should navigate to world-map since this is the last concept
-  await page.waitForURL("/world-map", { timeout: 8000 })
+  // Should navigate to the completion page
+  await page.waitForURL(/\/complete\/2/, { timeout: 8000 })
+  await expect(page.locator('[data-testid="return-btn"]')).toBeVisible()
 
-  // Completion flag should have been consumed by world-map mount
-  const flag = await page.evaluate(() => sessionStorage.getItem("zenkai-just-completed"))
-  expect(flag).toBeNull()
+  // Click return — navigates to world-map
+  await page.click('[data-testid="return-btn"]')
+  await page.waitForURL("/world-map", { timeout: 8000 })
 })

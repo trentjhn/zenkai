@@ -52,8 +52,19 @@ export default function WorldMapPage() {
 
   async function handleLocationTap(moduleId: number) {
     setSelectedModuleId(moduleId)
-    const detail = await api.getModule(moduleId)
-    setSelectedModuleDetail(detail)
+    try {
+      const detail = await api.getModule(moduleId)
+      setSelectedModuleDetail(detail)
+    } catch {
+      // If module detail fails to load, dismiss the panel rather than leaving an indefinite skeleton
+      setSelectedModuleId(null)
+      setSelectedModuleDetail(null)
+    }
+  }
+
+  function handleDismiss() {
+    setSelectedModuleId(null)
+    setSelectedModuleDetail(null)
   }
 
   async function handleEnterDojo() {
@@ -120,13 +131,14 @@ export default function WorldMapPage() {
 
       {/* Location slide-up panel */}
       <AnimatePresence>
-        {selectedModuleId && selectedModuleDetail && selectedLocation && (
+        {selectedModuleId && selectedLocation && (
           <LocationPanel
             key={selectedModuleId}
             location={selectedLocation}
-            module={selectedModuleDetail}
+            module={selectedModuleDetail ?? { id: selectedModuleId, title: "", is_unlocked: false, quiz_score_achieved: null, order_index: 0, concepts: [] }}
             onEnter={handleEnterDojo}
-            onDismiss={() => { setSelectedModuleId(null); setSelectedModuleDetail(null) }}
+            onDismiss={handleDismiss}
+            loading={!selectedModuleDetail}
           />
         )}
       </AnimatePresence>

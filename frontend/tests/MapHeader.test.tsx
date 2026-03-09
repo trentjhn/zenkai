@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest"
-import { render, screen, act } from "@testing-library/react"
+import { render, screen, act, fireEvent } from "@testing-library/react"
 import { AppHeader as MapHeader } from "@/components/ui/AppHeader"
 
 vi.mock("@/components/ui/RoninSprite", () => ({
@@ -41,6 +41,13 @@ describe("MapHeader", () => {
   it("starts displaying the initial XP without animation", () => {
     render(<MapHeader character={mockChar} targetXp={240} />)
     expect(screen.getByText("240 XP")).toBeInTheDocument()
+  })
+
+  it("calls onBack override instead of router.back when provided", () => {
+    const onBack = vi.fn()
+    render(<MapHeader backHref="/world-map" onBack={onBack} />)
+    fireEvent.click(screen.getByRole("button"))
+    expect(onBack).toHaveBeenCalledTimes(1)
   })
 
   it("animates XP count-up when targetXp prop increases", async () => {

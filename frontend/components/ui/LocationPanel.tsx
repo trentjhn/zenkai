@@ -18,9 +18,11 @@ interface LocationPanelProps {
   module: PanelModule
   onEnter: () => void
   onDismiss: () => void
+  /** When true, shows a loading skeleton instead of module detail */
+  loading?: boolean
 }
 
-export function LocationPanel({ location, module, onEnter, onDismiss }: LocationPanelProps) {
+export function LocationPanel({ location, module, onEnter, onDismiss, loading = false }: LocationPanelProps) {
   const totalCount = module.concepts.length
   const isCompleted = module.quiz_score_achieved !== null
 
@@ -41,8 +43,20 @@ export function LocationPanel({ location, module, onEnter, onDismiss }: Location
         exit={{ y: "100%" }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
       >
-        {/* Drag handle */}
-        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-zen-plasma/20" />
+        {/* Drag handle pill */}
+        <div className="flex justify-center mb-4">
+          <div className="h-1 w-10 rounded-full bg-zen-plasma/20" />
+        </div>
+
+        {/* Dismiss button — absolute so it doesn't affect pill centering */}
+        <button
+          data-testid="panel-dismiss-btn"
+          onClick={onDismiss}
+          className="absolute right-4 top-4 clipped-corners-sm px-2 py-1 font-mono text-[10px] text-zen-plasma/40 hover:text-zen-plasma/80 hover:bg-zen-plasma/10 transition-colors"
+          aria-label="Close panel"
+        >
+          &#x2715;
+        </button>
 
         <p className="font-mono text-[9px] uppercase tracking-widest text-zen-plasma/40">
           {location.biome}
@@ -50,36 +64,51 @@ export function LocationPanel({ location, module, onEnter, onDismiss }: Location
         <h2 className="font-heading text-xl font-bold text-zen-gold mt-0.5">
           {location.name}
         </h2>
-        <p className="font-heading text-base text-zinc-300 mt-0.5">{module.title}</p>
 
-        {/* Concept progress bar */}
-        {totalCount > 0 && (
-          <div className="mt-4">
-            <div className="flex gap-1">
-              {Array.from({ length: totalCount }, (_, i) => (
+        {loading ? (
+          <div data-testid="panel-loading" className="mt-4 space-y-3 animate-pulse">
+            <div className="h-4 w-48 bg-zinc-700 clipped-corners-sm" />
+            <div className="flex gap-1 mt-4">
+              {Array.from({ length: 5 }, (_, i) => (
                 <div key={i} className="h-1 flex-1 clipped-corners-sm bg-zinc-700" />
               ))}
             </div>
-            <p className="font-mono text-[9px] text-zen-plasma/40 mt-1">
-              {totalCount} concepts
-            </p>
+            <div className="h-10 w-full bg-zinc-800 clipped-corners-sm mt-5" />
           </div>
-        )}
+        ) : (
+          <>
+            <p className="font-heading text-base text-zinc-300 mt-0.5">{module.title}</p>
 
-        {/* CTA */}
-        <div className="mt-5">
-          {module.is_unlocked ? (
-            <SamuraiButton className="w-full" onClick={onEnter}>
-              {isCompleted ? "Revisit Dōjō" : "Enter Dōjō"}
-            </SamuraiButton>
-          ) : (
-            <div className="clipped-corners border border-zinc-700 bg-zinc-900/60 px-4 py-3 text-center">
-              <p className="font-mono text-xs text-zinc-600 uppercase tracking-widest">
-                Locked — complete the previous module first
-              </p>
+            {/* Concept progress bar */}
+            {totalCount > 0 && (
+              <div className="mt-4">
+                <div className="flex gap-1">
+                  {Array.from({ length: totalCount }, (_, i) => (
+                    <div key={i} className="h-1 flex-1 clipped-corners-sm bg-zinc-700" />
+                  ))}
+                </div>
+                <p className="font-mono text-[9px] text-zen-plasma/40 mt-1">
+                  {totalCount} concepts
+                </p>
+              </div>
+            )}
+
+            {/* CTA */}
+            <div className="mt-5">
+              {module.is_unlocked ? (
+                <SamuraiButton className="w-full" onClick={onEnter}>
+                  {isCompleted ? "Revisit Dōjō" : "Enter Dōjō"}
+                </SamuraiButton>
+              ) : (
+                <div className="clipped-corners border border-zinc-700 bg-zinc-900/60 px-4 py-3 text-center">
+                  <p className="font-mono text-xs text-zinc-600 uppercase tracking-widest">
+                    Locked — complete the previous module first
+                  </p>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </>
+        )}
       </motion.div>
     </div>
   )
