@@ -43,18 +43,20 @@ export function LocationPanel({ location, module, onEnter, onDismiss, loading = 
         exit={{ y: "100%" }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
       >
-        {/* Drag handle + dismiss row */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="h-1 w-10 rounded-full bg-zen-plasma/20 mx-auto" />
-          <button
-            data-testid="panel-dismiss-btn"
-            onClick={onDismiss}
-            className="absolute right-4 top-4 clipped-corners-sm px-2 py-1 font-mono text-[10px] text-zen-plasma/40 hover:text-zen-plasma/80 hover:bg-zen-plasma/10 transition-colors"
-            aria-label="Close panel"
-          >
-            &#x2715;
-          </button>
+        {/* Drag handle pill */}
+        <div className="flex justify-center mb-4">
+          <div className="h-1 w-10 rounded-full bg-zen-plasma/20" />
         </div>
+
+        {/* Dismiss button — absolute so it doesn't affect pill centering */}
+        <button
+          data-testid="panel-dismiss-btn"
+          onClick={onDismiss}
+          className="absolute right-4 top-4 clipped-corners-sm px-2 py-1 font-mono text-[10px] text-zen-plasma/40 hover:text-zen-plasma/80 hover:bg-zen-plasma/10 transition-colors"
+          aria-label="Close panel"
+        >
+          &#x2715;
+        </button>
 
         <p className="font-mono text-[9px] uppercase tracking-widest text-zen-plasma/40">
           {location.biome}
