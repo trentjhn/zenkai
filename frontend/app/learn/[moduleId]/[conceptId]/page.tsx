@@ -42,6 +42,9 @@ export default function LearnPage() {
     queryFn: () => api.getModule(moduleIdNum),
   })
 
+  const concepts = module?.concepts ?? []
+  const currentIdx = concepts.findIndex((c) => c.id === conceptIdNum)
+
   const progressMutation = useMutation({
     mutationFn: api.postProgress,
     onSuccess: () => {
@@ -90,8 +93,32 @@ export default function LearnPage() {
         backLabel="Exit"
         onBack={() => router.push("/world-map")}
       />
-    <div className="register-study min-h-screen px-6 pt-[104px] pb-10">
+    <div className="register-study min-h-[100dvh] px-6 pt-[104px] pb-10">
       <div className="mx-auto max-w-2xl space-y-6">
+
+        {/* Module progress bar */}
+        {module && (
+          <div className="space-y-1">
+            <div className="flex gap-1">
+              {concepts.map((c, i) => (
+                <motion.div
+                  key={c.id}
+                  layout
+                  className={`h-[3px] flex-1 clipped-corners-sm transition-colors duration-500 ${
+                    i < currentIdx
+                      ? "bg-zen-plasma"
+                      : i === currentIdx
+                      ? "bg-zen-gold"
+                      : "bg-zinc-800"
+                  }`}
+                />
+              ))}
+            </div>
+            <p className="font-mono text-[9px] uppercase tracking-widest text-zen-plasma/40">
+              Concept {currentIdx + 1} of {concepts.length} · {module.title}
+            </p>
+          </div>
+        )}
 
         <AnimatePresence mode="wait">
           {/* Stage: Prediction */}
