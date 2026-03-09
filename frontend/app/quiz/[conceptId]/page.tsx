@@ -103,7 +103,7 @@ export default function QuizPage() {
         onBack={() => router.push("/world-map")}
       />
       <div className="register-battle min-h-screen px-6 pt-[104px] pb-10">
-      <div className="mx-auto max-w-2xl space-y-6">
+        <div className="mx-auto max-w-2xl space-y-6">
         {/* Segmented progress bar */}
         <div className="flex items-center justify-between">
           <div className="flex gap-1">
@@ -162,7 +162,7 @@ export default function QuizPage() {
             className="h-24 w-16 shrink-0 self-start"
           />
         </div>
-      </div>
+        </div>
       </div>
     </>
   )
