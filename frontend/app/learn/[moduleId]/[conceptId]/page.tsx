@@ -48,8 +48,6 @@ export default function LearnPage() {
   const progressMutation = useMutation({
     mutationFn: api.postProgress,
     onSuccess: () => {
-      const concepts = module?.concepts ?? []
-      const currentIdx = concepts.findIndex((c) => c.id === conceptIdNum)
       const next = concepts[currentIdx + 1]
       if (next) {
         router.push(`/learn/${moduleId}/${next.id}`)
