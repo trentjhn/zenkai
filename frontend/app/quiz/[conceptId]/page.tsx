@@ -8,7 +8,7 @@ import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/queryKeys"
 import { QuizBattleCard, type QuizQuestion } from "@/components/learn/QuizBattleCard"
 import { ConfidenceChips } from "@/components/learn/ConfidenceChips"
-import { AssetPlaceholder } from "@/components/ui/AssetPlaceholder"
+import { RoninSprite } from "@/components/ui/RoninSprite"
 import { AppHeader } from "@/components/ui/AppHeader"
 
 type Phase = "question" | "confidence"
@@ -102,7 +102,7 @@ export default function QuizPage() {
         backLabel="Exit"
         onBack={() => router.push("/world-map")}
       />
-      <div className="register-battle min-h-screen px-6 pt-[104px] pb-10">
+      <div className="register-battle min-h-[100dvh] px-6 pt-[104px] pb-10">
         <div className="mx-auto max-w-2xl space-y-6">
         {/* Segmented progress bar */}
         <div className="flex items-center justify-between">
@@ -156,10 +156,12 @@ export default function QuizPage() {
             </AnimatePresence>
           </div>
 
-          {/* Character placeholder — battle idle */}
-          <AssetPlaceholder
-            label="Battle sprite"
-            className="h-24 w-16 shrink-0 self-start"
+          {/* Character — fight stance */}
+          <RoninSprite
+            animation="fight-stance-idle-8-frames"
+            direction="south"
+            scale={0.9}
+            className="shrink-0 self-start"
           />
         </div>
         </div>
