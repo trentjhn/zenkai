@@ -74,4 +74,11 @@ describe("LocationPanel", () => {
     fireEvent.click(screen.getByTestId("panel-dismiss-btn"))
     expect(onDismiss).toHaveBeenCalledTimes(1)
   })
+
+  it("calls onDismiss when dismiss button clicked during loading", () => {
+    const onDismiss = vi.fn()
+    render(<LocationPanel location={location} module={unlockedModule} onEnter={() => {}} onDismiss={onDismiss} loading={true} />)
+    fireEvent.click(screen.getByTestId("panel-dismiss-btn"))
+    expect(onDismiss).toHaveBeenCalledTimes(1)
+  })
 })
