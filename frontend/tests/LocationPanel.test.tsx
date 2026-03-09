@@ -61,4 +61,17 @@ describe("LocationPanel", () => {
     render(<LocationPanel location={location} module={completed} onEnter={() => {}} onDismiss={() => {}} />)
     expect(screen.getByText(/Revisit Dōjō/i)).toBeInTheDocument()
   })
+
+  it("shows loading skeleton when loading=true", () => {
+    render(<LocationPanel location={location} module={unlockedModule} onEnter={() => {}} onDismiss={() => {}} loading={true} />)
+    expect(screen.getByTestId("panel-loading")).toBeInTheDocument()
+    expect(screen.queryByText(/Enter Dōjō/i)).not.toBeInTheDocument()
+  })
+
+  it("shows dismiss button", () => {
+    const onDismiss = vi.fn()
+    render(<LocationPanel location={location} module={unlockedModule} onEnter={() => {}} onDismiss={onDismiss} />)
+    fireEvent.click(screen.getByTestId("panel-dismiss-btn"))
+    expect(onDismiss).toHaveBeenCalledTimes(1)
+  })
 })
