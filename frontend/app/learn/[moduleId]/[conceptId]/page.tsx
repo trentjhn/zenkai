@@ -52,8 +52,7 @@ export default function LearnPage() {
       if (next) {
         router.push(`/learn/${moduleId}/${next.id}`)
       } else {
-        sessionStorage.setItem("zenkai-just-completed", String(moduleIdNum))
-        router.push(`/world-map`)
+        router.push(`/complete/${moduleId}`)
       }
     },
   })
