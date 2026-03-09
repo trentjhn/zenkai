@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { describe, it, expect, vi } from "vitest"
 import { render, screen } from "@testing-library/react"
 import type React from "react"
 
@@ -45,16 +45,12 @@ vi.mock("framer-motion", () => ({
 import CompletePage from "@/app/complete/[moduleId]/page"
 
 describe("CompletePage", () => {
-  beforeEach(() => {
-    sessionStorage.clear()
-  })
-
   it("renders module title", () => {
     render(<CompletePage />)
     expect(screen.getByText("Prompt Engineering")).toBeInTheDocument()
   })
 
-  it("renders XP display", () => {
+  it("renders XP value", () => {
     render(<CompletePage />)
     expect(screen.getByTestId("xp-display")).toBeInTheDocument()
   })
@@ -62,16 +58,5 @@ describe("CompletePage", () => {
   it("renders return button", () => {
     render(<CompletePage />)
     expect(screen.getByTestId("return-btn")).toBeInTheDocument()
-  })
-
-  it("shows quiz score if stored in sessionStorage", () => {
-    sessionStorage.setItem("zenkai-quiz-score", "5/7")
-    render(<CompletePage />)
-    expect(screen.getByText(/5\/7/)).toBeInTheDocument()
-  })
-
-  it("does not show quiz score section when not stored", () => {
-    render(<CompletePage />)
-    expect(screen.queryByTestId("quiz-score")).not.toBeInTheDocument()
   })
 })

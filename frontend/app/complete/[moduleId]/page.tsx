@@ -1,9 +1,8 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
-import { motion, AnimatePresence } from "framer-motion"
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/queryKeys"
 import { AppHeader } from "@/components/ui/AppHeader"
@@ -16,9 +15,7 @@ export default function CompletePage() {
   const router = useRouter()
   const moduleIdNum = Number(moduleId)
 
-  const [quizScore, setQuizScore] = useState<string | null>(null)
   const [displayXp, setDisplayXp] = useState(0)
-  const animatedRef = useRef(false)
 
   const { data: character } = useQuery({
     queryKey: queryKeys.character(),
@@ -32,28 +29,20 @@ export default function CompletePage() {
 
   const location = getLocationByModuleId(moduleIdNum)
 
-  // Read quiz score from sessionStorage (set by quiz page if a review was done)
-  useEffect(() => {
-    const stored = sessionStorage.getItem("zenkai-quiz-score")
-    if (stored) {
-      setQuizScore(stored)
-      sessionStorage.removeItem("zenkai-quiz-score")
-    }
-  }, [])
-
   // XP count-up animation
   useEffect(() => {
-    if (!character || animatedRef.current) return
-    animatedRef.current = true
+    if (!character) return
     const target = character.total_xp
     const duration = 1200
     const startTime = performance.now()
+    let rafId: number
     function tick(now: number) {
       const progress = Math.min((now - startTime) / duration, 1)
       setDisplayXp(Math.round(target * progress))
-      if (progress < 1) requestAnimationFrame(tick)
+      if (progress < 1) rafId = requestAnimationFrame(tick)
     }
-    requestAnimationFrame(tick)
+    rafId = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(rafId)
   }, [character])
 
   function handleReturn() {
@@ -100,20 +89,6 @@ export default function CompletePage() {
             {displayXp}
           </p>
         </div>
-
-        {/* Quiz score — only if a review quiz was taken this session */}
-        <AnimatePresence>
-          {quizScore && (
-            <motion.div
-              data-testid="quiz-score"
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="font-mono text-[10px] text-zen-plasma/50 tracking-widest"
-            >
-              Review score: {quizScore}
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* Return CTA */}
         <SamuraiButton
