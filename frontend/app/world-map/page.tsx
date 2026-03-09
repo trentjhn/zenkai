@@ -120,13 +120,24 @@ export default function WorldMapPage() {
 
       {/* Location slide-up panel */}
       <AnimatePresence>
-        {selectedModuleId && selectedModuleDetail && selectedLocation && (
+        {selectedModuleId && selectedLocation && selectedModuleDetail && (
           <LocationPanel
             key={selectedModuleId}
             location={selectedLocation}
             module={selectedModuleDetail}
             onEnter={handleEnterDojo}
             onDismiss={() => { setSelectedModuleId(null); setSelectedModuleDetail(null) }}
+            loading={false}
+          />
+        )}
+        {selectedModuleId && selectedLocation && !selectedModuleDetail && (
+          <LocationPanel
+            key={`${selectedModuleId}-loading`}
+            location={selectedLocation}
+            module={{ id: selectedModuleId, title: "", is_unlocked: false, quiz_score_achieved: null, order_index: 0, concepts: [] }}
+            onEnter={() => {}}
+            onDismiss={() => { setSelectedModuleId(null); setSelectedModuleDetail(null) }}
+            loading={true}
           />
         )}
       </AnimatePresence>
