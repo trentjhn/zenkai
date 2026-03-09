@@ -95,8 +95,11 @@ export default function LearnPage() {
             >
               <PredictionQuestion
                 data={concept.prediction_question}
-                onAnswer={() => setStage("concept")}
-                revealed={false}
+                onAnswer={() => {
+                  // Delay 1500ms so the color-coded reveal and explanation are visible
+                  setTimeout(() => setStage("concept"), 1500)
+                }}
+                revealed={true}
               />
             </motion.div>
           )}
