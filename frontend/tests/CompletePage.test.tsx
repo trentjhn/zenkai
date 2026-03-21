@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest"
 import { render, screen } from "@testing-library/react"
 import type React from "react"
 import { useMutation } from "@tanstack/react-query"
+import type { CompleteResponse } from "@/lib/types"
 
 // Mock Next.js navigation — must be declared before page import (Vitest hoists vi.mock)
 vi.mock("next/navigation", () => ({
@@ -54,7 +55,7 @@ function mockMutation(data: unknown = null) {
     isError: false,
     isIdle: data === null,
     reset: vi.fn(),
-  } as ReturnType<typeof useMutation>)
+  } as ReturnType<typeof useMutation<CompleteResponse, Error, void>>)
 }
 
 describe("CompletePage", () => {
@@ -92,5 +93,20 @@ describe("CompletePage", () => {
     mockMutation({ score: 0.6, next_module_id: 3, next_module_unlocked: false })
     render(<CompletePage />)
     expect(screen.queryByTestId("unlock-banner")).not.toBeInTheDocument()
+  })
+
+  it("calls completeModule on mount", () => {
+    const mutate = vi.fn()
+    vi.mocked(useMutation).mockReturnValue({
+      mutate,
+      data: null,
+      isPending: false,
+      isSuccess: false,
+      isError: false,
+      isIdle: true,
+      reset: vi.fn(),
+    } as ReturnType<typeof useMutation<CompleteResponse, Error, void>>)
+    render(<CompletePage />)
+    expect(mutate).toHaveBeenCalledTimes(1)
   })
 })
