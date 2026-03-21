@@ -11,6 +11,19 @@ def read_kb_doc(kb_path: str, relative_path: str) -> str:
     return full_path.read_text(encoding="utf-8")
 
 
+def read_kb_directory(dir_path: str) -> dict[str, str]:
+    """
+    Read all .md files in a directory.
+    Returns {filename_stem: file_text} sorted alphabetically.
+    Used for directory-based modules like Module 10 (Playbooks).
+    """
+    path = Path(dir_path)
+    if not path.is_dir():
+        raise FileNotFoundError(f"KB directory not found: {path}")
+    files = sorted(path.glob("*.md"))
+    return {f.stem: f.read_text(encoding="utf-8") for f in files}
+
+
 def extract_concept_section(doc_text: str, section_title: str) -> Optional[str]:
     """Extract text under a ## heading, stopping at the next ## heading."""
     pattern = rf"(## {re.escape(section_title)}\n[\s\S]*?)(?=\n## |\Z)"

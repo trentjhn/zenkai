@@ -45,3 +45,33 @@ def test_list_concept_sections():
     assert "Chain-of-Thought Prompting" in sections
     assert "Self-Consistency" in sections
     assert len(sections) == 2
+
+
+def test_read_kb_directory_returns_dict_of_file_contents(tmp_path):
+    """Each .md file in the dir becomes an entry: {stem: text}."""
+    (tmp_path / "foo.md").write_text("# Foo\nsome content")
+    (tmp_path / "bar.md").write_text("# Bar\nother content")
+    (tmp_path / "ignore.txt").write_text("ignored")
+
+    from backend.pipeline.kb_reader import read_kb_directory
+    result = read_kb_directory(str(tmp_path))
+    assert set(result.keys()) == {"foo", "bar"}
+    assert "some content" in result["foo"]
+    assert "other content" in result["bar"]
+
+
+def test_read_kb_directory_sorted_alphabetically(tmp_path):
+    """Files are returned in sorted order (deterministic concept order_index)."""
+    (tmp_path / "zzz.md").write_text("last")
+    (tmp_path / "aaa.md").write_text("first")
+    from backend.pipeline.kb_reader import read_kb_directory
+    result = read_kb_directory(str(tmp_path))
+    assert list(result.keys()) == ["aaa", "zzz"]
+
+
+def test_read_kb_directory_raises_if_path_not_dir(tmp_path):
+    """Raises FileNotFoundError if the directory does not exist."""
+    from backend.pipeline.kb_reader import read_kb_directory
+    import pytest
+    with pytest.raises(FileNotFoundError):
+        read_kb_directory(str(tmp_path / "nonexistent"))
