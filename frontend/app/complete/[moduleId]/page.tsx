@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useMutation } from "@tanstack/react-query"
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/queryKeys"
 import { AppHeader } from "@/components/ui/AppHeader"
@@ -27,7 +27,16 @@ export default function CompletePage() {
     queryFn: () => api.getModule(moduleIdNum),
   })
 
+  const { mutate: completeModule, data: completeData } = useMutation({
+    mutationFn: () => api.completeModule(moduleIdNum),
+  })
+
   const location = getLocationByModuleId(moduleIdNum)
+
+  // Fire complete mutation once on mount
+  useEffect(() => {
+    completeModule()
+  }, [completeModule])
 
   // XP count-up animation
   useEffect(() => {
@@ -49,6 +58,10 @@ export default function CompletePage() {
     sessionStorage.setItem("zenkai-just-completed", moduleId)
     router.push("/world-map")
   }
+
+  const score = completeData?.score ?? null
+  const scorePercent = score !== null ? Math.round(score * 100) : null
+  const nextUnlocked = completeData?.next_module_unlocked ?? false
 
   return (
     <div className="fixed inset-0 bg-zen-void flex flex-col select-none">
@@ -76,6 +89,30 @@ export default function CompletePage() {
             </p>
           )}
         </div>
+
+        {/* Score display — shown once completeModule resolves */}
+        {scorePercent !== null && (
+          <div className="text-center" data-testid="score-display">
+            <p className="font-mono text-[9px] uppercase tracking-widest text-zen-plasma/40">
+              Comprehension Score
+            </p>
+            <p className="font-heading text-2xl font-bold text-zen-plasma tabular-nums mt-1">
+              {scorePercent}%
+            </p>
+          </div>
+        )}
+
+        {/* Unlock banner */}
+        {nextUnlocked && (
+          <div
+            data-testid="unlock-banner"
+            className="clipped-corners border border-zen-plasma/40 bg-zen-slate/60 px-6 py-3 text-center"
+          >
+            <p className="font-mono text-[10px] uppercase tracking-widest text-zen-plasma">
+              Next module unlocked
+            </p>
+          </div>
+        )}
 
         {/* Character sprite */}
         <RoninSprite animation="breathing-idle" direction="south" scale={1.2} />

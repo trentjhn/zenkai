@@ -6,6 +6,7 @@ import type {
   ProgressPayload,
   ProgressResponse,
   ReviewItem,
+  CompleteResponse,
 } from "@/lib/types"
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
@@ -38,5 +39,10 @@ export const api = {
   endSession: (sessionId: number) =>
     apiFetch<{ session_id: number; ended: boolean }>(`/sessions/${sessionId}/end`, {
       method: "POST",
+    }),
+  completeModule: (moduleId: number, userId = 1) =>
+    apiFetch<CompleteResponse>(`/modules/${moduleId}/complete`, {
+      method: "POST",
+      body: JSON.stringify({ user_id: userId }),
     }),
 }
