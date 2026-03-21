@@ -72,6 +72,13 @@ async def test_complete_module_returns_score(client: AsyncClient, test_db: str):
     data = r.json()
     assert abs(data["score"] - (2 / 3)) < 0.01
 
+    # Verify score was actually persisted to DB
+    async with aiosqlite.connect(test_db) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute("SELECT quiz_score_achieved FROM modules WHERE id=1") as cur:
+            row = await cur.fetchone()
+    assert abs(row["quiz_score_achieved"] - (2 / 3)) < 0.01
+
 
 async def test_complete_module_unlocks_next_on_70_pct(client: AsyncClient, test_db: str):
     """Score >= 0.7 unlocks the next module by order_index."""
@@ -84,7 +91,7 @@ async def test_complete_module_unlocks_next_on_70_pct(client: AsyncClient, test_
     r = await client.post("/modules/1/complete", json={"user_id": 1})
     assert r.status_code == 200
     assert r.json()["next_module_unlocked"] is True
-    assert r.json()["score"] >= 0.7
+    assert abs(r.json()["score"] - 0.7) < 0.001
 
     modules_r = await client.get("/modules")
     modules_by_order = {m["order_index"]: m for m in modules_r.json()}
