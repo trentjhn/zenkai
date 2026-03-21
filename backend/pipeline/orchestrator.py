@@ -71,9 +71,9 @@ async def run_pipeline_for_module(module_id: int, kb_path: str) -> dict:
             doc_text = read_kb_doc(kb_path, kb_source)
             concept_titles = list_concept_sections(doc_text)
             concept_entries = [
-                (title, extract_concept_section(doc_text, title))
+                (title, section)
                 for title in concept_titles
-                if extract_concept_section(doc_text, title)
+                if (section := extract_concept_section(doc_text, title))
             ]
             logger.info(f"Module {module_id}: found {len(concept_entries)} concept sections")
 
@@ -128,10 +128,11 @@ async def run_pipeline_for_module(module_id: int, kb_path: str) -> dict:
                 if existing:
                     await db.execute(
                         """UPDATE concepts
-                           SET default_layer=?, deep_layer=?, prediction_question=?,
+                           SET order_index=?, default_layer=?, deep_layer=?, prediction_question=?,
                                worked_example=?, content_hash=?, generated_at=CURRENT_TIMESTAMP
                            WHERE id=?""",
                         (
+                            order_idx,
                             json.dumps(default_layer), json.dumps(deep_layer),
                             json.dumps(prediction), json.dumps(worked_example),
                             current_hash, existing["id"],
@@ -189,7 +190,7 @@ async def generate_quiz_for_module(module_id: int, kb_path: str) -> dict:
         is_directory = kb_source.endswith("/")
         if is_directory:
             dir_path = str(Path(kb_path) / kb_source)
-            concept_file_map: dict | None = read_kb_directory(dir_path)
+            concept_file_map: dict[str, str] | None = read_kb_directory(dir_path)
             doc_text = None
         else:
             doc_text = read_kb_doc(kb_path, kb_source)
@@ -222,6 +223,7 @@ async def generate_quiz_for_module(module_id: int, kb_path: str) -> dict:
                 section = extract_concept_section(doc_text, title)  # type: ignore[arg-type]
             if not section:
                 results["failed"].append({"title": title, "error": "Section not found in KB"})
+                await _log_pipeline(db, module_id, concept_id, "3", HAIKU, False, "Section not found in KB")
                 continue
 
             try:
