@@ -1,4 +1,5 @@
-from backend.pipeline.kb_reader import extract_concept_section, compute_section_hash, list_concept_sections
+import pytest
+from backend.pipeline.kb_reader import extract_concept_section, compute_section_hash, list_concept_sections, read_kb_directory
 
 SAMPLE_KB = """# Prompt Engineering
 
@@ -53,7 +54,6 @@ def test_read_kb_directory_returns_dict_of_file_contents(tmp_path):
     (tmp_path / "bar.md").write_text("# Bar\nother content")
     (tmp_path / "ignore.txt").write_text("ignored")
 
-    from backend.pipeline.kb_reader import read_kb_directory
     result = read_kb_directory(str(tmp_path))
     assert set(result.keys()) == {"foo", "bar"}
     assert "some content" in result["foo"]
@@ -64,14 +64,26 @@ def test_read_kb_directory_sorted_alphabetically(tmp_path):
     """Files are returned in sorted order (deterministic concept order_index)."""
     (tmp_path / "zzz.md").write_text("last")
     (tmp_path / "aaa.md").write_text("first")
-    from backend.pipeline.kb_reader import read_kb_directory
     result = read_kb_directory(str(tmp_path))
     assert list(result.keys()) == ["aaa", "zzz"]
 
 
 def test_read_kb_directory_raises_if_path_not_dir(tmp_path):
     """Raises FileNotFoundError if the directory does not exist."""
-    from backend.pipeline.kb_reader import read_kb_directory
-    import pytest
     with pytest.raises(FileNotFoundError):
         read_kb_directory(str(tmp_path / "nonexistent"))
+
+
+def test_read_kb_directory_empty_dir_returns_empty_dict(tmp_path):
+    """Empty directory returns an empty dict — no .md files."""
+    result = read_kb_directory(str(tmp_path))
+    assert result == {}
+
+
+def test_read_kb_directory_excludes_readme(tmp_path):
+    """README.md is excluded — it's documentation, not a learnable concept."""
+    (tmp_path / "README.md").write_text("# README\ndescription")
+    (tmp_path / "actual-concept.md").write_text("# Concept\ncontent")
+    result = read_kb_directory(str(tmp_path))
+    assert "README" not in result
+    assert "actual-concept" in result

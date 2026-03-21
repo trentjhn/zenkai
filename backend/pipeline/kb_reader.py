@@ -19,8 +19,8 @@ def read_kb_directory(dir_path: str) -> dict[str, str]:
     """
     path = Path(dir_path)
     if not path.is_dir():
-        raise FileNotFoundError(f"KB directory not found: {path}")
-    files = sorted(path.glob("*.md"))
+        raise FileNotFoundError(f"KB directory not found: {path.resolve()}")
+    files = sorted(f for f in path.glob("*.md") if f.stem != "README")
     return {f.stem: f.read_text(encoding="utf-8") for f in files}
 
 
