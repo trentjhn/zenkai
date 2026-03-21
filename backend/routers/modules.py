@@ -1,6 +1,5 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Optional
 from backend.database import get_db
 
 router = APIRouter(prefix="/modules", tags=["modules"])
@@ -38,6 +37,7 @@ async def get_module(module_id: int):
         ) as cursor:
             concepts = await cursor.fetchall()
         result = dict(module)
+        result["is_unlocked"] = bool(result["is_unlocked"])
         result["concepts"] = [dict(c) for c in concepts]
         return result
     finally:
@@ -78,8 +78,9 @@ async def complete_module(module_id: int, body: CompleteRequest):
         score = correct / total
 
         await db.execute(
-            "UPDATE modules SET quiz_score_achieved=?, updated_at=CURRENT_TIMESTAMP WHERE id=?",
-            (score, module_id),
+            """UPDATE modules SET quiz_score_achieved=?, updated_at=CURRENT_TIMESTAMP
+               WHERE id=? AND (quiz_score_achieved IS NULL OR quiz_score_achieved < ?)""",
+            (score, module_id, score),
         )
 
         next_unlocked = False
@@ -101,5 +102,8 @@ async def complete_module(module_id: int, body: CompleteRequest):
 
         await db.commit()
         return {"score": score, "next_module_id": next_module_id, "next_module_unlocked": next_unlocked}
+    except Exception:
+        await db.rollback()
+        raise
     finally:
         await db.close()
