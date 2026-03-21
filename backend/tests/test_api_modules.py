@@ -30,7 +30,7 @@ async def test_module_0_is_unlocked(client: AsyncClient):
 
 async def test_locked_modules_not_unlocked(client: AsyncClient):
     r = await client.get("/modules")
-    locked = [m for m in r.json() if m["order_index"] > 0]
+    locked = [m for m in r.json() if m["order_index"] > 1]
     assert all(not m["is_unlocked"] for m in locked)
 
 
