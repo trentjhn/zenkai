@@ -7,10 +7,12 @@ results in SQLite. Every run is logged to pipeline_log.
 """
 import json
 import logging
+from pathlib import Path
 from typing import Optional
 
 from backend.pipeline.kb_reader import (
     read_kb_doc,
+    read_kb_directory,
     extract_concept_section,
     list_concept_sections,
     compute_section_hash,
@@ -58,12 +60,24 @@ async def run_pipeline_for_module(module_id: int, kb_path: str) -> dict:
             logger.info(f"Module {module_id} has no KB source — skipping pipeline")
             return results
 
-        doc_text = read_kb_doc(kb_path, kb_source)
-        concept_titles = list_concept_sections(doc_text)
-        logger.info(f"Module {module_id}: found {len(concept_titles)} concept sections")
+        is_directory = kb_source.endswith("/")
 
-        for order_idx, title in enumerate(concept_titles):
-            section = extract_concept_section(doc_text, title)
+        if is_directory:
+            dir_path = str(Path(kb_path) / kb_source)
+            concept_map = read_kb_directory(dir_path)
+            concept_entries = list(concept_map.items())  # [(stem, text), ...]
+            logger.info(f"Module {module_id}: found {len(concept_entries)} concept files (directory mode)")
+        else:
+            doc_text = read_kb_doc(kb_path, kb_source)
+            concept_titles = list_concept_sections(doc_text)
+            concept_entries = [
+                (title, section)
+                for title in concept_titles
+                if (section := extract_concept_section(doc_text, title))
+            ]
+            logger.info(f"Module {module_id}: found {len(concept_entries)} concept sections")
+
+        for order_idx, (title, section) in enumerate(concept_entries):
             if not section:
                 continue
 
@@ -114,10 +128,11 @@ async def run_pipeline_for_module(module_id: int, kb_path: str) -> dict:
                 if existing:
                     await db.execute(
                         """UPDATE concepts
-                           SET default_layer=?, deep_layer=?, prediction_question=?,
+                           SET order_index=?, default_layer=?, deep_layer=?, prediction_question=?,
                                worked_example=?, content_hash=?, generated_at=CURRENT_TIMESTAMP
                            WHERE id=?""",
                         (
+                            order_idx,
                             json.dumps(default_layer), json.dumps(deep_layer),
                             json.dumps(prediction), json.dumps(worked_example),
                             current_hash, existing["id"],
@@ -172,7 +187,14 @@ async def generate_quiz_for_module(module_id: int, kb_path: str) -> dict:
             logger.info(f"Module {module_id} has no KB source — skipping quiz generation")
             return results
 
-        doc_text = read_kb_doc(kb_path, kb_source)
+        is_directory = kb_source.endswith("/")
+        if is_directory:
+            dir_path = str(Path(kb_path) / kb_source)
+            concept_file_map: dict[str, str] | None = read_kb_directory(dir_path)
+            doc_text = None
+        else:
+            doc_text = read_kb_doc(kb_path, kb_source)
+            concept_file_map = None
 
         async with db.execute(
             "SELECT id, title FROM concepts WHERE module_id=? ORDER BY order_index",
@@ -195,9 +217,13 @@ async def generate_quiz_for_module(module_id: int, kb_path: str) -> dict:
                 logger.info(f"Quiz already exists, skipping: {title}")
                 continue
 
-            section = extract_concept_section(doc_text, title)
+            if concept_file_map is not None:
+                section = concept_file_map.get(title)
+            else:
+                section = extract_concept_section(doc_text, title)  # type: ignore[arg-type]
             if not section:
                 results["failed"].append({"title": title, "error": "Section not found in KB"})
+                await _log_pipeline(db, module_id, concept_id, "3", HAIKU, False, "Section not found in KB")
                 continue
 
             try:

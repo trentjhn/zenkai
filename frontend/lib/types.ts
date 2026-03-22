@@ -81,3 +81,9 @@ export interface ReviewItem {
   title: string
   module_id: number
 }
+
+export interface CompleteResponse {
+  score: number | null
+  next_module_id: number | null
+  next_module_unlocked: boolean
+}
